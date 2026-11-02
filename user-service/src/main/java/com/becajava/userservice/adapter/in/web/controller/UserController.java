@@ -4,22 +4,28 @@ import com.becajava.userservice.adapter.in.web.dto.CreateUserRequest;
 import com.becajava.userservice.adapter.in.web.dto.UserResponse;
 import com.becajava.userservice.domain.model.User;
 import com.becajava.userservice.port.in.CreateUserUseCase;
+import com.becajava.userservice.port.in.GetUserByIdUseCase;
+import com.becajava.userservice.port.in.ListUsersUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
     private final CreateUserUseCase createUserUseCase;
+    private final ListUsersUseCase listUsersUseCase;
+    private final GetUserByIdUseCase getUserByIdUseCase;
 
-    public UserController(CreateUserUseCase createUserUseCase) {
+    public UserController(CreateUserUseCase createUserUseCase, ListUsersUseCase listUsersUseCase, GetUserByIdUseCase getUserByIdUseCase) {
         this.createUserUseCase = createUserUseCase;
+        this.listUsersUseCase = listUsersUseCase;
+        this.getUserByIdUseCase = getUserByIdUseCase;
     }
 
     @PostMapping
@@ -39,4 +45,35 @@ public class UserController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    @GetMapping
+    public ResponseEntity<List<UserResponse>> listUsers() {
+
+        List<User> users = listUsersUseCase.listUsers();
+
+        List<UserResponse> responses = new ArrayList<>();
+
+        for (User user : users) {
+
+            UserResponse response = new UserResponse(
+                    user.getId(),
+                    user.getName(),
+                    user.getEmail()
+            );
+
+            responses.add(response);
+        }
+
+        return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+        User user = getUserByIdUseCase.getUserById(id);
+
+        UserResponse response = new UserResponse(user.getId(), user.getName(), user.getEmail());
+
+        return ResponseEntity.ok(response);
+    }
+
 }
