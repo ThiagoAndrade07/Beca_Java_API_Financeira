@@ -33,6 +33,11 @@ public class UserJpaEntity {
         this.passwordHash = passwordHash;
     }
 
+    public UserJpaEntity(Long id, String name, String email, String passwordHash) {
+        this(name, email, passwordHash);
+        this.id = id;
+    }
+
     public Long getId() {
         return id;
     }

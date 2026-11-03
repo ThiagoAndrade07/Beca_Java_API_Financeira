@@ -6,7 +6,7 @@ import com.becajava.userservice.domain.model.User;
 public class UserPersistenceMapper {
 
     public static UserJpaEntity toJpaEntity(User user) {
-        return new UserJpaEntity(user.getName(), user.getEmail(), user.getPasswordHash());
+        return new UserJpaEntity(user.getId(), user.getName(), user.getEmail(), user.getPasswordHash());
     }
 
     public static User toDomain(UserJpaEntity entity) {

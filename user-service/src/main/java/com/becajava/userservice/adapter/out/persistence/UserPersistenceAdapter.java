@@ -38,21 +38,20 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
     @Override
     public List<User> listAll() {
 
-       List<UserJpaEntity> entities = userJpaRepository.findAll();
+        List<UserJpaEntity> entities = userJpaRepository.findAll();
 
-       List<User> users = new ArrayList<>();
+        List<User> users = new ArrayList<>();
 
-       for(UserJpaEntity entity : entities) {
+        for (UserJpaEntity entity : entities) {
 
-           User user = UserPersistenceMapper.toDomain(entity);
+            User user = UserPersistenceMapper.toDomain(entity);
 
-           users.add(user);
-       }
+            users.add(user);
+        }
 
-       return users;
+        return users;
 
     }
-
 
     @Override
     public Optional<User> findById(Long id) {

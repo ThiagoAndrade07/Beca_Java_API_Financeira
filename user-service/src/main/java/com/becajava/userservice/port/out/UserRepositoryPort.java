@@ -14,4 +14,5 @@ public interface UserRepositoryPort {
     List<User> listAll();
 
     Optional<User> findById(Long id);
+
 }
