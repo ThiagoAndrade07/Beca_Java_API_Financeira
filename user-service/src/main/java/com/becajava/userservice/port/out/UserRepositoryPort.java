@@ -15,4 +15,6 @@ public interface UserRepositoryPort {
 
     Optional<User> findById(Long id);
 
+    void deleteById(Long id);
+
 }

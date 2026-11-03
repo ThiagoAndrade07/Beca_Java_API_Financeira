@@ -57,4 +57,10 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
     public Optional<User> findById(Long id) {
         return userJpaRepository.findById(id).map(entity -> UserPersistenceMapper.toDomain(entity));
     }
+
+    @Override
+    public void deleteById(Long id) {
+        userJpaRepository.deleteById(id);
+    }
+
 }

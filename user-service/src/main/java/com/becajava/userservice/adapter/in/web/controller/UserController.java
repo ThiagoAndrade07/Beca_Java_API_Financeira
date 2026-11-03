@@ -6,8 +6,9 @@ import com.becajava.userservice.adapter.in.web.dto.UserResponse;
 import com.becajava.userservice.domain.model.User;
 import com.becajava.userservice.port.in.CreateUserUseCase;
 import com.becajava.userservice.port.in.GetUserByIdUseCase;
-import com.becajava.userservice.port.in.ListUsersUseCase;
+import com.becajava.userservice.port.in.DeleteUserUseCase;
 import com.becajava.userservice.port.in.UpdateUserUseCase;
+import com.becajava.userservice.port.in.ListUsersUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,12 +25,18 @@ public class UserController {
     private final ListUsersUseCase listUsersUseCase;
     private final GetUserByIdUseCase getUserByIdUseCase;
     private final UpdateUserUseCase updateUserUseCase;
+    private final DeleteUserUseCase deleteUserUseCase;
 
-    public UserController(CreateUserUseCase createUserUseCase, ListUsersUseCase listUsersUseCase, GetUserByIdUseCase getUserByIdUseCase, UpdateUserUseCase updateUserUseCase) {
+    public UserController(CreateUserUseCase createUserUseCase,
+                          ListUsersUseCase listUsersUseCase,
+                          GetUserByIdUseCase getUserByIdUseCase,
+                          UpdateUserUseCase updateUserUseCase,
+                          DeleteUserUseCase deleteUserUseCase) {
         this.createUserUseCase = createUserUseCase;
         this.listUsersUseCase = listUsersUseCase;
         this.getUserByIdUseCase = getUserByIdUseCase;
         this.updateUserUseCase = updateUserUseCase;
+        this.deleteUserUseCase = deleteUserUseCase;
     }
 
     @PostMapping
@@ -97,4 +104,10 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        deleteUserUseCase.deleteUser(id);
+
+        return ResponseEntity.noContent().build();
+    }
 }
