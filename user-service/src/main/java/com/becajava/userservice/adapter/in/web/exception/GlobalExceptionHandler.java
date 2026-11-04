@@ -8,7 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.becajava.userservice.application.exception.InvalidCsvFileException;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -69,5 +71,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(response);
+    }
+
+    @ExceptionHandler(InvalidCsvFileException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidCsvFile(InvalidCsvFileException exception) {
+        ApiErrorResponse response = new ApiErrorResponse(HttpStatus.BAD_REQUEST.value(), exception.getMessage(), Map.of());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<ApiErrorResponse> handleCsvReadError(IOException exception) {
+        ApiErrorResponse response = new ApiErrorResponse(HttpStatus.BAD_REQUEST.value(), "O arquivo CSV não pode ser processado", Map.of());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 }
