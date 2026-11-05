@@ -12,6 +12,7 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.UncheckedIOException;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -20,7 +21,9 @@ import org.apache.commons.csv.CSVRecord;
 @Component
 public class UserCsvParser {
 
-    public List<ImportUserCommand> parse(InputStream inputStream) throws IOException {
+    private static final int MAX_LINES = 1000;
+
+    public List<ImportUserCommand> parse(InputStream inputStream) {
 
         List<ImportUserCommand> commands = new ArrayList<>();
 
@@ -54,6 +57,10 @@ public class UserCsvParser {
                 for (CSVRecord record : csvParser) {
                     int lineNumber = Math.toIntExact(record.getRecordNumber() + 1);
 
+                    if (record.getRecordNumber() > MAX_LINES) {
+                        throw new InvalidCsvFileException("O arquivo CSV deve conter no máximo 1000 linhas de usuários");
+                    }
+
                     String name = record.isSet("name") ? record.get("name") : "";
                     String email = record.isSet("email") ? record.get("email") : "";
                     String password = record.isSet("password") ? record.get("password") : "";
@@ -63,6 +70,8 @@ public class UserCsvParser {
                     commands.add(command);
                 }
             }
+        } catch (IOException | UncheckedIOException exception) {
+            throw new InvalidCsvFileException("O arquivo CSV não pôde ser processado", exception);
         }
 
         if (commands.isEmpty()) {

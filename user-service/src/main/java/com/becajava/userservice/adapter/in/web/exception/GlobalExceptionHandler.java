@@ -3,6 +3,8 @@ package com.becajava.userservice.adapter.in.web.exception;
 import com.becajava.userservice.adapter.in.web.dto.ApiErrorResponse;
 import com.becajava.userservice.domain.exception.EmailAlreadyExistsException;
 import com.becajava.userservice.domain.exception.UserNotFoundException;
+import com.becajava.userservice.application.exception.InvalidCsvFileException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -18,11 +20,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
-import com.becajava.userservice.application.exception.InvalidCsvFileException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.io.IOException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -195,20 +196,13 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    // Ocorre quando há uma falha técnica durante a leitura do arquivo CSV.
-    @ExceptionHandler(IOException.class)
-    public ResponseEntity<ApiErrorResponse> handleCsvReadError(
-            IOException exception
-    ) {
-        ApiErrorResponse response = new ApiErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "O arquivo CSV não pôde ser processado",
-                Map.of()
-        );
+    // Ocorre quando o arquivo enviado ultrapassa o limite de upload configurado.
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleExceededMaxUpload(MaxUploadSizeExceededException exception) {
+        ApiErrorResponse response = new ApiErrorResponse(HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                "O arquivo enviado excede o tamanho máximo permitido", Map.of());
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
     }
 
     // Captura falhas inesperadas que não foram tratadas pelos handlers específicos.

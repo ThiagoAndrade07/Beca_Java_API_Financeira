@@ -32,15 +32,19 @@ public class UserImportController {
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ImportUsersResponse> importUsers(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<ImportUsersResponse> importUsers(@RequestParam("file") MultipartFile file) {
 
         if (file.isEmpty()) {
-            throw new InvalidCsvFileException(
-                    "O arquivo CSV está vazio"
-            );
+            throw new InvalidCsvFileException("O arquivo CSV está vazio");
         }
 
-        List<ImportUserCommand> commands = userCsvParser.parse(file.getInputStream());
+        List<ImportUserCommand> commands;
+
+        try {
+            commands = userCsvParser.parse(file.getInputStream());
+        } catch (IOException exception) {
+            throw new InvalidCsvFileException("O arquivo CSV não pôde ser processado", exception);
+        }
 
         ImportUsersResult result = importUsersUseCase.importUsers(commands);
 
@@ -48,9 +52,6 @@ public class UserImportController {
 
         return ResponseEntity.ok(response);
     }
-
-
-
 
 
 }
