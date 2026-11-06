@@ -17,4 +17,6 @@ public interface UserRepositoryPort {
 
     void deleteById(Long id);
 
+    Optional<User> findByEmail(String email);
+
 }

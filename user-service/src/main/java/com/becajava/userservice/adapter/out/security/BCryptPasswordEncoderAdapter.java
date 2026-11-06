@@ -1,16 +1,16 @@
 package com.becajava.userservice.adapter.out.security;
 
 import com.becajava.userservice.port.out.PasswordEncoderPort;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class BCryptPasswordEncoderAdapter implements PasswordEncoderPort {
 
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
-    public BCryptPasswordEncoderAdapter() {
-        this.passwordEncoder = new BCryptPasswordEncoder();
+    public BCryptPasswordEncoderAdapter(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
