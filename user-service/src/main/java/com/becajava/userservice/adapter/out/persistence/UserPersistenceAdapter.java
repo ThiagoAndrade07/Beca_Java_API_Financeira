@@ -4,8 +4,10 @@ package com.becajava.userservice.adapter.out.persistence;
 import com.becajava.userservice.adapter.out.persistence.entity.UserJpaEntity;
 import com.becajava.userservice.adapter.out.persistence.mapper.UserPersistenceMapper;
 import com.becajava.userservice.adapter.out.persistence.repository.UserJpaRepository;
+import com.becajava.userservice.domain.exception.EmailAlreadyExistsException;
 import com.becajava.userservice.domain.model.User;
 import com.becajava.userservice.port.out.UserRepositoryPort;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -23,11 +25,22 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
 
     @Override
     public User save(User user) {
-        UserJpaEntity entity = UserPersistenceMapper.toJpaEntity(user);
+        try {
+            UserJpaEntity entity = UserPersistenceMapper.toJpaEntity(user);
 
-        UserJpaEntity savedEntity = userJpaRepository.save(entity);
+            UserJpaEntity savedEntity = userJpaRepository.saveAndFlush(entity);
 
-        return UserPersistenceMapper.toDomain(savedEntity);
+            return UserPersistenceMapper.toDomain(savedEntity);
+
+        } catch (DataIntegrityViolationException exception) {
+            boolean emailAlreadyExists = userJpaRepository.existsByEmail(user.getEmail());
+
+            if (emailAlreadyExists) {
+                throw new EmailAlreadyExistsException();
+            }
+
+            throw exception;
+        }
     }
 
     @Override
@@ -62,5 +75,11 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
     public void deleteById(Long id) {
         userJpaRepository.deleteById(id);
     }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return userJpaRepository.findByEmail(email).map(entity -> UserPersistenceMapper.toDomain(entity));
+    }
+
 
 }
