@@ -39,7 +39,7 @@ class CreateUserServiceTest {
     void shouldCreateUserWithNormalizedDataAndEncodedPassword() {
         String name = "  Thiago Andrade  ";
         String email = "  THIAGO@EXAMPLE.COM  ";
-        String password = "Senha123";
+        String password = "  Senha123";
         String passwordHash = "$2a$10$hash-de-teste";
 
         User savedUser = new User(
