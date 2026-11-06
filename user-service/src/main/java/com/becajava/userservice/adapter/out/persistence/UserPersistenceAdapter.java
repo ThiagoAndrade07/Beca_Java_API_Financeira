@@ -76,4 +76,10 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
         userJpaRepository.deleteById(id);
     }
 
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return userJpaRepository.findByEmail(email).map(entity -> UserPersistenceMapper.toDomain(entity));
+    }
+
+
 }
