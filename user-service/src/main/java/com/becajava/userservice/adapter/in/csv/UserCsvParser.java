@@ -38,7 +38,7 @@ public class UserCsvParser {
                 )
         ) {
 
-            CSVFormat format = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).setTrim(true).get();
+            CSVFormat format = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).get();
 
             try (CSVParser csvParser = format.parse(reader)) {
 
@@ -61,8 +61,10 @@ public class UserCsvParser {
                         throw new InvalidCsvFileException("O arquivo CSV deve conter no máximo 1000 linhas de usuários");
                     }
 
-                    String name = record.isSet("name") ? record.get("name") : "";
-                    String email = record.isSet("email") ? record.get("email") : "";
+                    String name = record.isSet("name") ? record.get("name").trim() : "";
+
+                    String email = record.isSet("email") ? record.get("email").trim() : "";
+
                     String password = record.isSet("password") ? record.get("password") : "";
 
                     ImportUserCommand command = new ImportUserCommand(lineNumber, name, email, password);

@@ -31,8 +31,15 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
             UserJpaEntity savedEntity = userJpaRepository.saveAndFlush(entity);
 
             return UserPersistenceMapper.toDomain(savedEntity);
-        }catch (DataIntegrityViolationException exception) {
-            throw new EmailAlreadyExistsException();
+
+        } catch (DataIntegrityViolationException exception) {
+            boolean emailAlreadyExists = userJpaRepository.existsByEmail(user.getEmail());
+
+            if (emailAlreadyExists) {
+                throw new EmailAlreadyExistsException();
+            }
+
+            throw exception;
         }
     }
 

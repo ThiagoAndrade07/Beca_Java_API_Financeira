@@ -145,6 +145,21 @@ class UserCsvParserTest {
         );
     }
 
+    @Test
+    void shouldTrimNameAndEmailWithoutTrimmingPassword() {
+        String csvContent =
+                "name,email,password\n"
+                        + "  Maria Silva  ,  maria@example.com  ,  Senha123  \n";
+
+        List<ImportUserCommand> commands = userCsvParser.parse(createInputStream(csvContent));
+
+        ImportUserCommand command = commands.get(0);
+
+        assertEquals("Maria Silva", command.getName());
+        assertEquals("maria@example.com", command.getEmail());
+        assertEquals("  Senha123  ", command.getPassword());
+    }
+
     private InputStream createInputStream(String content) {
         return new ByteArrayInputStream(
                 content.getBytes(StandardCharsets.UTF_8)
