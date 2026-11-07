@@ -1,5 +1,6 @@
 package com.becajava.userservice.application.model;
 
+import com.becajava.userservice.application.validation.Utf8ByteSize;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -19,6 +20,7 @@ public class ImportUserCommand {
 
     @NotBlank(message = "A senha é obrigatória")
     @Size(min = 8, max = 72, message = "A senha deve ter de 8 a 72 caracteres")
+    @Utf8ByteSize(max = 72, message = "A senha deve ter no máximo 72 bytes em UTF-8")
     private final String password;
 
     public ImportUserCommand(int lineNumber, String name, String email, String password) {
@@ -27,7 +29,6 @@ public class ImportUserCommand {
         this.email = email;
         this.password = password;
     }
-
 
     public int getLineNumber() {
         return lineNumber;

@@ -1,9 +1,10 @@
 package com.becajava.userservice.adapter.in.web.dto;
 
+import com.becajava.userservice.application.validation.Utf8ByteSize;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-
 public class CreateUserRequest {
 
     @NotBlank(message = "O nome é obrigatório")
@@ -17,6 +18,7 @@ public class CreateUserRequest {
 
     @NotBlank(message = "A senha é obrigatória")
     @Size(min = 8, max = 72, message = "A senha deve ter de 8 a 72 caracteres")
+    @Utf8ByteSize(max = 72, message = "A senha deve ter no máximo 72 bytes em UTF-8")
     private String password;
 
     public String getName() {
