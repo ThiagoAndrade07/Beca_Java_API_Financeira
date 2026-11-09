@@ -1,0 +1,53 @@
+package com.becajava.transactionservice.adapter.out.persistence;
+
+import com.becajava.transactionservice.adapter.out.persistence.entity.TransactionJpaEntity;
+import com.becajava.transactionservice.adapter.out.persistence.mapper.TransactionPersistenceMapper;
+import com.becajava.transactionservice.adapter.out.persistence.repository.TransactionJpaRepository;
+import com.becajava.transactionservice.domain.model.Transaction;
+import com.becajava.transactionservice.port.out.TransactionRepositoryPort;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+@Component
+public class TransactionPersistenceAdapter implements TransactionRepositoryPort {
+
+    private final TransactionJpaRepository transactionJpaRepository;
+
+    public TransactionPersistenceAdapter(TransactionJpaRepository transactionJpaRepository) {
+        this.transactionJpaRepository = transactionJpaRepository;
+    }
+
+    @Override
+    public Transaction save(Transaction transaction) {
+        TransactionJpaEntity entity = TransactionPersistenceMapper.toJpaEntity(transaction);
+
+        TransactionJpaEntity savedEntity = transactionJpaRepository.save(entity);
+
+        return TransactionPersistenceMapper.toDomain(savedEntity);
+    }
+
+    @Override
+    public Optional<Transaction> findByIdAndOwnerUserId(Long id, Long ownerUserId) {
+        return transactionJpaRepository.findByIdAndOwnerUserId(id, ownerUserId).map(TransactionPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public List<Transaction> findAllByOwnerUserId(Long ownerUserId) {
+        List<TransactionJpaEntity> entities =
+                transactionJpaRepository.findAllByOwnerUserId(ownerUserId);
+
+        List<Transaction> transactions = new ArrayList<>();
+
+        for (TransactionJpaEntity entity : entities) {
+            Transaction transaction = TransactionPersistenceMapper.toDomain(entity);
+
+            transactions.add(transaction);
+        }
+
+        return transactions;
+    }
+
+}
