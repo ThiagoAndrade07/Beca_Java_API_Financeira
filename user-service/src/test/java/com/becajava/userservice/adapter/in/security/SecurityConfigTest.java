@@ -19,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
+import com.becajava.userservice.port.in.GetAuthenticatedUserUseCase;
 
 import java.util.List;
 import java.util.Optional;
@@ -70,6 +71,9 @@ class SecurityConfigTest {
     @MockitoBean
     private DeleteUserUseCase deleteUserUseCase;
 
+    @MockitoBean
+    private GetAuthenticatedUserUseCase getAuthenticatedUserUseCase;
+
     @BeforeEach
     void setUpAuthenticatedUser() {
         User user = new User(
@@ -78,6 +82,8 @@ class SecurityConfigTest {
                 EMAIL,
                 passwordEncoder.encode(PASSWORD)
         );
+
+        when(getAuthenticatedUserUseCase.getAuthenticatedUser(EMAIL)).thenReturn(user);
 
         when(userRepositoryPort.findByEmail(EMAIL)).thenReturn(Optional.of(user));
 
@@ -158,5 +164,21 @@ class SecurityConfigTest {
                 .andExpect(jsonPath("$.id").value(2))
                 .andExpect(jsonPath("$.name").value("João Souza"))
                 .andExpect(jsonPath("$.email").value("joao@example.com"));
+    }
+
+    @Test
+    void shouldReturnAuthenticatedUser() throws Exception {
+
+        mockMvc.perform(
+                        get("/users/me")
+                                .with(httpBasic(
+                                        EMAIL,
+                                        PASSWORD
+                                ))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Maria Silva"))
+                .andExpect(jsonPath("$.email").value(EMAIL));
     }
 }
