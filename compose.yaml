@@ -33,5 +33,18 @@ services:
       postgres:
         condition: service_healthy
 
+  transaction-postgres:
+    image: postgres:17-alpine
+    container_name: beca-java-transaction-postgres
+    environment:
+      POSTGRES_DB: ${TRANSACTION_POSTGRES_DB}
+      POSTGRES_USER: ${TRANSACTION_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${TRANSACTION_POSTGRES_PASSWORD}
+    ports:
+      - "5435:5432"
+    volumes:
+      - transaction_postgres_data:/var/lib/postgresql/data
+
 volumes:
   postgres_data:
+  transaction_postgres_data:
