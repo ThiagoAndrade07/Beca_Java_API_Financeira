@@ -9,6 +9,7 @@ import com.becajava.userservice.port.in.GetUserByIdUseCase;
 import com.becajava.userservice.port.in.DeleteUserUseCase;
 import com.becajava.userservice.port.in.UpdateUserUseCase;
 import com.becajava.userservice.port.in.ListUsersUseCase;
+import com.becajava.userservice.port.in.GetAuthenticatedUserUseCase;
 import com.becajava.userservice.adapter.in.web.config.OpenApiConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -17,6 +18,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,17 +33,20 @@ public class UserController {
     private final GetUserByIdUseCase getUserByIdUseCase;
     private final UpdateUserUseCase updateUserUseCase;
     private final DeleteUserUseCase deleteUserUseCase;
+    private final GetAuthenticatedUserUseCase getAuthenticatedUserUseCase;
 
     public UserController(CreateUserUseCase createUserUseCase,
                           ListUsersUseCase listUsersUseCase,
                           GetUserByIdUseCase getUserByIdUseCase,
                           UpdateUserUseCase updateUserUseCase,
-                          DeleteUserUseCase deleteUserUseCase) {
+                          DeleteUserUseCase deleteUserUseCase,
+                          GetAuthenticatedUserUseCase getAuthenticatedUserUseCase) {
         this.createUserUseCase = createUserUseCase;
         this.listUsersUseCase = listUsersUseCase;
         this.getUserByIdUseCase = getUserByIdUseCase;
         this.updateUserUseCase = updateUserUseCase;
         this.deleteUserUseCase = deleteUserUseCase;
+        this.getAuthenticatedUserUseCase = getAuthenticatedUserUseCase;
     }
 
     @Operation(summary = "Cadastrar usuário", description = "Cadastra um novo usuário com a senha protegida por BCrypt.")
@@ -143,5 +148,18 @@ public class UserController {
         deleteUserUseCase.deleteUser(id);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getAuthenticatedUser(Authentication authentication) {
+        User user = getAuthenticatedUserUseCase.getAuthenticatedUser(authentication.getName());
+
+        UserResponse response = new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail()
+        );
+
+        return ResponseEntity.ok(response);
     }
 }
