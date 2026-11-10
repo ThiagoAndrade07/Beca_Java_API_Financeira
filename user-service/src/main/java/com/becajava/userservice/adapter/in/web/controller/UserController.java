@@ -10,6 +10,10 @@ import com.becajava.userservice.port.in.DeleteUserUseCase;
 import com.becajava.userservice.port.in.UpdateUserUseCase;
 import com.becajava.userservice.port.in.ListUsersUseCase;
 import com.becajava.userservice.port.in.GetAuthenticatedUserUseCase;
+import com.becajava.userservice.adapter.in.web.config.OpenApiConfig;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import java.util.ArrayList;
 import java.util.List;
 
+@Tag(name = "Users", description = "Operações de gerenciamento de usuários")
 @RestController
 @RequestMapping("/users")
 public class UserController {
@@ -44,6 +49,7 @@ public class UserController {
         this.getAuthenticatedUserUseCase = getAuthenticatedUserUseCase;
     }
 
+    @Operation(summary = "Cadastrar usuário", description = "Cadastra um novo usuário com a senha protegida por BCrypt.")
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
 
@@ -62,6 +68,13 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(
+                    summary = "Listar usuários",
+                    description = "Retorna todos os usuários cadastrados.",
+                    security = @SecurityRequirement(
+                    name = OpenApiConfig.BASIC_AUTH
+            )
+    )
     @GetMapping
     public ResponseEntity<List<UserResponse>> listUsers() {
 
@@ -83,6 +96,13 @@ public class UserController {
         return ResponseEntity.ok(responses);
     }
 
+    @Operation(
+                    summary = "Consultar usuário por ID",
+                    description = "Retorna o usuário correspondente ao identificador informado.",
+                    security = @SecurityRequirement(
+                    name = OpenApiConfig.BASIC_AUTH
+            )
+    )
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
         User user = getUserByIdUseCase.getUserById(id);
@@ -92,6 +112,13 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+                    summary = "Atualizar usuário",
+                    description = "Atualiza o nome e o e-mail do usuário sem alterar sua senha.",
+                    security = @SecurityRequirement(
+                    name = OpenApiConfig.BASIC_AUTH
+            )
+    )
     @PutMapping("/{id}")
     public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest request) {
         User updateUser = updateUserUseCase.updateUser(
@@ -109,6 +136,13 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+                    summary = "Excluir usuário",
+                    description = "Exclui o usuário correspondente ao identificador informado.",
+                    security = @SecurityRequirement(
+                    name = OpenApiConfig.BASIC_AUTH
+            )
+    )
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         deleteUserUseCase.deleteUser(id);

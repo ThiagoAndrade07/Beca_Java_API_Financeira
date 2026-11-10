@@ -14,11 +14,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import com.becajava.userservice.adapter.in.web.config.OpenApiConfig;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.io.IOException;
 import java.util.List;
 
-
+@Tag(name = "User Import", description = "Importação de usuários por arquivo CSV")
 @RestController
 @RequestMapping("/users")
 public class UserImportController {
@@ -31,8 +36,18 @@ public class UserImportController {
         this.importUsersUseCase = importUsersUseCase;
     }
 
+    @Operation(
+            summary = "Importar usuários por CSV",
+            description = "Importa as linhas válidas e informa as linhas rejeitadas e seus motivos.",
+            security = @SecurityRequirement(
+                    name = OpenApiConfig.BASIC_AUTH
+            )
+    )
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ImportUsersResponse> importUsers(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ImportUsersResponse> importUsers(
+            @Parameter(description = "Arquivo CSV com o cabeçalho name,email,password", required = true)
+            @RequestParam("file") MultipartFile file
+    ) {
 
         if (file.isEmpty()) {
             throw new InvalidCsvFileException("O arquivo CSV está vazio");
