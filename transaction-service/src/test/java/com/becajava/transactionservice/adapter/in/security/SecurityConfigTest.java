@@ -1,4 +1,6 @@
 package com.becajava.transactionservice.adapter.in.security;
+
+import com.becajava.transactionservice.application.exception.UserServiceUnavailableException;
 import com.becajava.transactionservice.application.model.AuthenticatedUser;
 import com.becajava.transactionservice.port.out.UserServicePort;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,6 +89,20 @@ class SecurityConfigTest {
                 )
                 .andExpect(status().isOk())
                 .andExpect(content().string("autenticado"));
+    }
+
+    @Test
+    void shouldReturnServiceUnavailableWhenUserServiceIsUnavailable() throws Exception {
+        String authorizationHeader = "Basic dXNlcjpzZW5oYQ==";
+
+        when(userServicePort.getAuthenticatedUser(authorizationHeader))
+                .thenThrow(new UserServiceUnavailableException(new RuntimeException("Falha simulada de conexão")));
+
+        mockMvc.perform(get("/test/authenticated").header(HttpHeaders.AUTHORIZATION, authorizationHeader))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().contentTypeCompatibleWith("application/json"))
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.message").value("Serviço de usuários temporariamente indisponível"));
     }
 
     @RestController
