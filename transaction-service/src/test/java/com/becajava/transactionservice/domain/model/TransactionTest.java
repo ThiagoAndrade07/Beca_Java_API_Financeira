@@ -107,4 +107,97 @@ public class TransactionTest {
                 exception.getMessage()
         );
     }
+
+    @Test
+    void shouldCreateApprovedWithdrawal() {
+        Transaction transaction = Transaction.createWithdrawal(
+                7L,
+                new BigDecimal("300.00"),
+                "Retirada aprovada",
+                TransactionCategory.OTHER,
+                new BigDecimal("1000.00"),
+                new BigDecimal("500.00"),
+                new BigDecimal("1000.00"),
+                new BigDecimal("200.00")
+        );
+
+        assertEquals(
+                TransactionType.WITHDRAWAL,
+                transaction.getType()
+        );
+        assertEquals(
+                TransactionStatus.APPROVED,
+                transaction.getStatus()
+        );
+        assertNull(transaction.getRejectionReason());
+    }
+
+    @Test
+    void shouldRejectWithdrawalWithInsufficientBalance() {
+        Transaction transaction = Transaction.createWithdrawal(
+                7L,
+                new BigDecimal("600.00"),
+                "Retirada sem saldo",
+                TransactionCategory.OTHER,
+                new BigDecimal("500.00"),
+                new BigDecimal("1000.00"),
+                new BigDecimal("2000.00"),
+                BigDecimal.ZERO
+        );
+
+        assertEquals(
+                TransactionStatus.REJECTED,
+                transaction.getStatus()
+        );
+        assertEquals(
+                "Saldo insuficiente",
+                transaction.getRejectionReason()
+        );
+    }
+
+    @Test
+    void shouldRejectWithdrawalAboveTransactionLimit() {
+        Transaction transaction = Transaction.createWithdrawal(
+                7L,
+                new BigDecimal("600.00"),
+                "Retirada acima do limite",
+                TransactionCategory.OTHER,
+                new BigDecimal("2000.00"),
+                new BigDecimal("500.00"),
+                new BigDecimal("2000.00"),
+                BigDecimal.ZERO
+        );
+
+        assertEquals(
+                TransactionStatus.REJECTED,
+                transaction.getStatus()
+        );
+        assertEquals(
+                "Valor acima do limite por transação",
+                transaction.getRejectionReason()
+        );
+    }
+
+    @Test
+    void shouldRejectWithdrawalAboveDailyLimit() {
+        Transaction transaction = Transaction.createWithdrawal(
+                7L,
+                new BigDecimal("300.00"),
+                "Retirada acima do limite diario",
+                TransactionCategory.OTHER,
+                new BigDecimal("2000.00"),
+                new BigDecimal("500.00"),
+                new BigDecimal("1000.00"),
+                new BigDecimal("800.00")
+        );
+
+        assertEquals(
+                TransactionStatus.REJECTED,
+                transaction.getStatus()
+        );
+        assertEquals(
+                "Limite diário excedido",
+                transaction.getRejectionReason()
+        );
+    }
 }

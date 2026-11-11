@@ -4,6 +4,7 @@ import com.becajava.transactionservice.domain.exception.InvalidTransactionExcept
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 public class Transaction {
     private Long id;
@@ -18,6 +19,40 @@ public class Transaction {
     private String rejectionReason;
     private Long reversedTransactionId;
 
+
+    private static final ZoneId SAO_PAULO = ZoneId.of("America/Sao_Paulo");
+
+    public Transaction(Long ownerUserId, Long destinationUserId,
+                       BigDecimal amount, LocalDateTime occurredAt,
+                       String description, TransactionCategory category,
+                       TransactionType type, TransactionStatus status,
+                       String rejectionReason, Long reversedTransactionId) {
+        this.ownerUserId = ownerUserId;
+        this.destinationUserId = destinationUserId;
+        this.amount = amount;
+        this.occurredAt = occurredAt;
+        this.description = description;
+        this.category = category;
+        this.type = type;
+        this.status = status;
+        this.rejectionReason = rejectionReason;
+        this.reversedTransactionId = reversedTransactionId;
+    }
+
+    public Transaction(Long id, Long ownerUserId,
+                       Long destinationUserId, BigDecimal amount,
+                       LocalDateTime occurredAt, String description,
+                       TransactionCategory category, TransactionType type,
+                       TransactionStatus status, String rejectionReason,
+                       Long reversedTransactionId) {
+        this(ownerUserId, destinationUserId,
+                amount, occurredAt,
+                description, category,
+                type, status,
+                rejectionReason, reversedTransactionId
+        );
+        this.id = id;
+    }
 
     public static Transaction createDeposit(
             Long ownerUserId,
@@ -53,7 +88,7 @@ public class Transaction {
                 ownerUserId,
                 null,
                 amount,
-                LocalDateTime.now(),
+                LocalDateTime.now(SAO_PAULO),
                 description.trim(),
                 category,
                 TransactionType.DEPOSIT,
@@ -63,37 +98,69 @@ public class Transaction {
         );
     }
 
+    public static Transaction createWithdrawal(
+            Long ownerUserId,
+            BigDecimal amount,
+            String description,
+            TransactionCategory category,
+            BigDecimal balance,
+            BigDecimal transactionLimit,
+            BigDecimal dailyLimit,
+            BigDecimal spentToday
+    ) {
+        if (ownerUserId == null) {
+            throw new InvalidTransactionException(
+                    "O usuário dono da transação é obrigatório"
+            );
+        }
 
-    public Transaction(Long ownerUserId, Long destinationUserId,
-                       BigDecimal amount, LocalDateTime occurredAt,
-                       String description, TransactionCategory category,
-                       TransactionType type, TransactionStatus status,
-                       String rejectionReason, Long reversedTransactionId) {
-        this.ownerUserId = ownerUserId;
-        this.destinationUserId = destinationUserId;
-        this.amount = amount;
-        this.occurredAt = occurredAt;
-        this.description = description;
-        this.category = category;
-        this.type = type;
-        this.status = status;
-        this.rejectionReason = rejectionReason;
-        this.reversedTransactionId = reversedTransactionId;
-    }
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidTransactionException(
+                    "O valor da retirada deve ser maior que zero"
+            );
+        }
 
-    public Transaction(Long id, Long ownerUserId,
-                       Long destinationUserId, BigDecimal amount,
-                       LocalDateTime occurredAt, String description,
-                       TransactionCategory category, TransactionType type,
-                       TransactionStatus status, String rejectionReason,
-                       Long reversedTransactionId) {
-        this(ownerUserId, destinationUserId,
-                amount, occurredAt,
-                description, category,
-                type, status,
-                rejectionReason, reversedTransactionId
+        if (description == null || description.isBlank()) {
+            throw new InvalidTransactionException(
+                    "A descrição da retirada é obrigatória"
+            );
+        }
+
+        if (category == null || category == TransactionCategory.INCOME) {
+            throw new InvalidTransactionException(
+                    "A retirada deve utilizar uma categoria de despesa"
+            );
+        }
+
+        String rejectionReason = null;
+
+        if (amount.compareTo(balance) > 0) {
+            rejectionReason = "Saldo insuficiente";
+
+        } else if (amount.compareTo(transactionLimit) > 0) {
+            rejectionReason = "Valor acima do limite por transação";
+
+        } else if (spentToday.add(amount).compareTo(dailyLimit) > 0) {
+            rejectionReason = "Limite diário excedido";
+        }
+
+        TransactionStatus status =
+                rejectionReason == null
+                        ? TransactionStatus.APPROVED
+                        : TransactionStatus.REJECTED;
+
+        return new Transaction(
+                ownerUserId,
+                null,
+                amount,
+                LocalDateTime.now(SAO_PAULO),
+                description.trim(),
+                category,
+                TransactionType.WITHDRAWAL,
+                status,
+                rejectionReason,
+                null
         );
-        this.id = id;
     }
 
     public Long getId() {

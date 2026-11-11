@@ -1,6 +1,7 @@
 package com.becajava.transactionservice.adapter.in.web.exception;
 
 import com.becajava.transactionservice.adapter.in.web.dto.ApiErrorResponse;
+import com.becajava.transactionservice.application.exception.AccountServiceUnavailableException;
 import com.becajava.transactionservice.domain.exception.InvalidTransactionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,4 +23,20 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
+
+    @ExceptionHandler(AccountServiceUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccountServiceUnavailable(
+            AccountServiceUnavailableException exception
+    ) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                exception.getMessage(),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(response);
+    }
+
 }
