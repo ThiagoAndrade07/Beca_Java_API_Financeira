@@ -19,7 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
-
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -137,12 +138,26 @@ public class UserController {
     }
 
     @Operation(
-                    summary = "Excluir usuário",
-                    description = "Exclui o usuário correspondente ao identificador informado.",
-                    security = @SecurityRequirement(
+            summary = "Excluir usuário",
+            description = "Exclui o usuário correspondente ao identificador informado.",
+            security = @SecurityRequirement(
                     name = OpenApiConfig.BASIC_AUTH
             )
     )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Usuário excluído com sucesso"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Usuário não encontrado"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Autenticação necessária ou credenciais inválidas"
+            )
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         deleteUserUseCase.deleteUser(id);
