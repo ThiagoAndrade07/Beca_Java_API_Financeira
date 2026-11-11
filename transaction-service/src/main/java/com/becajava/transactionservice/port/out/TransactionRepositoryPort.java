@@ -1,6 +1,7 @@
 package com.becajava.transactionservice.port.out;
 
 import com.becajava.transactionservice.domain.model.Transaction;
+import com.becajava.transactionservice.domain.model.TransactionType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,4 +20,6 @@ public interface TransactionRepositoryPort {
     List<Transaction> findAllByOwnerUserId(Long ownerUserId);
 
     BigDecimal sumApprovedOutgoingAmountByOwnerUserIdBetween(Long ownerUserId, LocalDateTime start, LocalDateTime end);
+
+    List<Transaction> findAllByOwnerUserIdAndFilters(Long ownerUserId, TransactionType type, LocalDateTime start, LocalDateTime end);
 }

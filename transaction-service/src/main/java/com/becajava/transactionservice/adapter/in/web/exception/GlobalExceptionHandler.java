@@ -3,6 +3,7 @@ package com.becajava.transactionservice.adapter.in.web.exception;
 import com.becajava.transactionservice.adapter.in.web.dto.ApiErrorResponse;
 import com.becajava.transactionservice.application.exception.AccountServiceUnavailableException;
 import com.becajava.transactionservice.domain.exception.InvalidTransactionException;
+import com.becajava.transactionservice.domain.exception.TransactionNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -36,6 +37,21 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(response);
+    }
+
+    @ExceptionHandler(TransactionNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleTransactionNotFound(
+            TransactionNotFoundException exception
+    ) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                exception.getMessage(),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
                 .body(response);
     }
 

@@ -40,8 +40,7 @@ public class TransactionPersistenceAdapter implements TransactionRepositoryPort 
 
     @Override
     public List<Transaction> findAllByOwnerUserId(Long ownerUserId) {
-        List<TransactionJpaEntity> entities =
-                transactionJpaRepository.findAllByOwnerUserId(ownerUserId);
+        List<TransactionJpaEntity> entities = transactionJpaRepository.findAllByOwnerUserId(ownerUserId);
 
         List<Transaction> transactions = new ArrayList<>();
 
@@ -55,11 +54,7 @@ public class TransactionPersistenceAdapter implements TransactionRepositoryPort 
     }
 
     @Override
-    public BigDecimal sumApprovedOutgoingAmountByOwnerUserIdBetween(
-            Long ownerUserId,
-            LocalDateTime start,
-            LocalDateTime end
-    ) {
+    public BigDecimal sumApprovedOutgoingAmountByOwnerUserIdBetween(Long ownerUserId, LocalDateTime start, LocalDateTime end) {
         BigDecimal total =
                 transactionJpaRepository
                         .sumOutgoingAmountByOwnerUserIdBetween(
@@ -74,9 +69,22 @@ public class TransactionPersistenceAdapter implements TransactionRepositoryPort 
                                 end
                         );
 
-        return total != null
-                ? total
-                : BigDecimal.ZERO;
+        return total != null ? total : BigDecimal.ZERO;
+    }
+
+    @Override
+    public List<Transaction> findAllByOwnerUserIdAndFilters(Long ownerUserId, TransactionType type, LocalDateTime start, LocalDateTime end) {
+        List<TransactionJpaEntity> entities = transactionJpaRepository.findAllByOwnerUserIdAndFilters(ownerUserId, type, start, end);
+
+        List<Transaction> transactions = new ArrayList<>();
+
+        for (TransactionJpaEntity entity : entities) {
+            transactions.add(
+                    TransactionPersistenceMapper.toDomain(entity)
+            );
+        }
+
+        return transactions;
     }
 
 }
