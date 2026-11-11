@@ -240,4 +240,71 @@ class CreateTransactionServiceTest {
 
         verifyNoInteractions(transactionRepositoryPort);
     }
+
+    @Test
+    void shouldCreateAndSaveApprovedTransfer() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("300.00"),
+                        "Transferência aprovada",
+                        TransactionCategory.TRANSFER,
+                        TransactionType.TRANSFER,
+                        8L
+                );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("1000.00"),
+                        new BigDecimal("1000.00"),
+                        new BigDecimal("500.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L)).thenReturn(Optional.of(accountBalance));
+
+        when(
+                transactionRepositoryPort
+                        .sumApprovedOutgoingAmountByOwnerUserIdBetween(
+                                eq(7L),
+                                any(LocalDateTime.class),
+                                any(LocalDateTime.class)
+                        )
+        ).thenReturn(new BigDecimal("200.00"));
+
+        when(transactionRepositoryPort.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction result = createTransactionService.createTransaction(command);
+
+        ArgumentCaptor<Transaction> transactionCaptor = ArgumentCaptor.forClass(Transaction.class);
+
+        verify(transactionRepositoryPort).save(transactionCaptor.capture());
+
+        Transaction transactionSentToRepository = transactionCaptor.getValue();
+
+        assertEquals(7L, transactionSentToRepository.getOwnerUserId());
+
+        assertEquals(8L, transactionSentToRepository.getDestinationUserId());
+
+        assertEquals(new BigDecimal("300.00"), transactionSentToRepository.getAmount());
+
+        assertEquals(TransactionType.TRANSFER, transactionSentToRepository.getType());
+
+        assertEquals(TransactionCategory.TRANSFER, transactionSentToRepository.getCategory());
+
+        assertEquals(TransactionStatus.APPROVED, transactionSentToRepository.getStatus());
+
+        assertNull(transactionSentToRepository.getRejectionReason());
+
+        assertEquals(TransactionStatus.APPROVED, result.getStatus());
+
+        verify(accountBalancePort).findByUserId(7L);
+
+        verify(transactionRepositoryPort)
+                .sumApprovedOutgoingAmountByOwnerUserIdBetween(
+                        eq(7L),
+                        any(LocalDateTime.class),
+                        any(LocalDateTime.class)
+                );
+    }
 }

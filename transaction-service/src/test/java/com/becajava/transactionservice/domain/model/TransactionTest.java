@@ -200,4 +200,139 @@ public class TransactionTest {
                 transaction.getRejectionReason()
         );
     }
+
+    @Test
+    void shouldCreateApprovedTransferWhenBalanceAndLimitsAreAvailable() {
+        Transaction transaction = Transaction.createTransfer(
+                7L,
+                8L,
+                new BigDecimal("300.00"),
+                "  Transferência para outro usuário  ",
+                new BigDecimal("1000.00"),
+                new BigDecimal("500.00"),
+                new BigDecimal("1000.00"),
+                new BigDecimal("200.00")
+        );
+
+        assertEquals(
+                7L,
+                transaction.getOwnerUserId()
+        );
+
+        assertEquals(
+                8L,
+                transaction.getDestinationUserId()
+        );
+
+        assertEquals(
+                new BigDecimal("300.00"),
+                transaction.getAmount()
+        );
+
+        assertEquals(
+                "Transferência para outro usuário",
+                transaction.getDescription()
+        );
+
+        assertEquals(
+                TransactionType.TRANSFER,
+                transaction.getType()
+        );
+
+        assertEquals(
+                TransactionCategory.TRANSFER,
+                transaction.getCategory()
+        );
+
+        assertEquals(
+                TransactionStatus.APPROVED,
+                transaction.getStatus()
+        );
+
+        assertNotNull(transaction.getOccurredAt());
+        assertNull(transaction.getRejectionReason());
+        assertNull(transaction.getReversedTransactionId());
+    }
+
+    @Test
+    void shouldRejectTransferWithInsufficientBalance() {
+        Transaction transaction = Transaction.createTransfer(
+                7L,
+                8L,
+                new BigDecimal("600.00"),
+                "Transferência sem saldo",
+                new BigDecimal("500.00"),
+                new BigDecimal("1000.00"),
+                new BigDecimal("2000.00"),
+                BigDecimal.ZERO
+        );
+
+        assertEquals(
+                TransactionStatus.REJECTED,
+                transaction.getStatus()
+        );
+
+        assertEquals(
+                "Saldo insuficiente",
+                transaction.getRejectionReason()
+        );
+
+        assertEquals(
+                TransactionType.TRANSFER,
+                transaction.getType()
+        );
+
+        assertEquals(
+                8L,
+                transaction.getDestinationUserId()
+        );
+    }
+
+    @Test
+    void shouldRejectTransferAboveTransactionLimit() {
+        Transaction transaction = Transaction.createTransfer(
+                7L,
+                8L,
+                new BigDecimal("600.00"),
+                "Transferência acima do limite",
+                new BigDecimal("2000.00"),
+                new BigDecimal("500.00"),
+                new BigDecimal("2000.00"),
+                BigDecimal.ZERO
+        );
+
+        assertEquals(
+                TransactionStatus.REJECTED,
+                transaction.getStatus()
+        );
+
+        assertEquals(
+                "Valor acima do limite por transação",
+                transaction.getRejectionReason()
+        );
+    }
+
+    @Test
+    void shouldRejectTransferAboveDailyLimit() {
+        Transaction transaction = Transaction.createTransfer(
+                7L,
+                8L,
+                new BigDecimal("300.00"),
+                "Transferência acima do limite diário",
+                new BigDecimal("2000.00"),
+                new BigDecimal("500.00"),
+                new BigDecimal("1000.00"),
+                new BigDecimal("800.00")
+        );
+
+        assertEquals(
+                TransactionStatus.REJECTED,
+                transaction.getStatus()
+        );
+
+        assertEquals(
+                "Limite diário excedido",
+                transaction.getRejectionReason()
+        );
+    }
 }

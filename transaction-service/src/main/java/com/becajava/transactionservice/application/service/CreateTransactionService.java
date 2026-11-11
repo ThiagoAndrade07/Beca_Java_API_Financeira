@@ -43,10 +43,11 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                     command.getCategory()
             );
 
-        } else if (TransactionType.WITHDRAWAL.equals(
-                command.getType()
-        )) {
+        } else if (TransactionType.WITHDRAWAL.equals(command.getType())) {
             transaction = createWithdrawal(command);
+
+        } else if (TransactionType.TRANSFER.equals(command.getType())) {
+            transaction = createTransfer(command);
 
         } else {
             throw new InvalidTransactionException(
@@ -91,6 +92,47 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                 command.getAmount(),
                 command.getDescription(),
                 command.getCategory(),
+                accountBalance.getBalance(),
+                accountBalance.getTransactionLimit(),
+                accountBalance.getDailyLimit(),
+                spentToday
+        );
+    }
+
+    private Transaction createTransfer(
+            CreateTransactionCommand command
+    ) {
+        AccountBalance accountBalance =
+                accountBalancePort
+                        .findByUserId(command.getOwnerUserId())
+                        .orElseThrow(
+                                () -> new InvalidTransactionException(
+                                        "Conta de saldo e limites não encontrada"
+                                )
+                        );
+
+        LocalDate today =
+                LocalDate.now(SAO_PAULO);
+
+        LocalDateTime startOfDay =
+                today.atStartOfDay();
+
+        LocalDateTime startOfNextDay =
+                today.plusDays(1).atStartOfDay();
+
+        BigDecimal spentToday =
+                transactionRepositoryPort
+                        .sumApprovedOutgoingAmountByOwnerUserIdBetween(
+                                command.getOwnerUserId(),
+                                startOfDay,
+                                startOfNextDay
+                        );
+
+        return Transaction.createTransfer(
+                command.getOwnerUserId(),
+                command.getDestinationUserId(),
+                command.getAmount(),
+                command.getDescription(),
                 accountBalance.getBalance(),
                 accountBalance.getTransactionLimit(),
                 accountBalance.getDailyLimit(),

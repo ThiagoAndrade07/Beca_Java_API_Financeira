@@ -144,10 +144,7 @@ public class Transaction {
             rejectionReason = "Limite diário excedido";
         }
 
-        TransactionStatus status =
-                rejectionReason == null
-                        ? TransactionStatus.APPROVED
-                        : TransactionStatus.REJECTED;
+        TransactionStatus status = rejectionReason == null ? TransactionStatus.APPROVED : TransactionStatus.REJECTED;
 
         return new Transaction(
                 ownerUserId,
@@ -157,6 +154,74 @@ public class Transaction {
                 description.trim(),
                 category,
                 TransactionType.WITHDRAWAL,
+                status,
+                rejectionReason,
+                null
+        );
+    }
+
+    public static Transaction createTransfer(
+            Long ownerUserId,
+            Long destinationUserId,
+            BigDecimal amount,
+            String description,
+            BigDecimal balance,
+            BigDecimal transactionLimit,
+            BigDecimal dailyLimit,
+            BigDecimal spentToday
+    ) {
+        if (ownerUserId == null) {
+            throw new InvalidTransactionException(
+                    "O usuário remetente é obrigatório"
+            );
+        }
+
+        if (destinationUserId == null) {
+            throw new InvalidTransactionException(
+                    "O usuário destinatário é obrigatório"
+            );
+        }
+
+        if (ownerUserId.equals(destinationUserId)) {
+            throw new InvalidTransactionException(
+                    "O destinatário deve ser diferente do remetente"
+            );
+        }
+
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidTransactionException(
+                    "O valor da transferência deve ser maior que zero"
+            );
+        }
+
+        if (description == null || description.isBlank()) {
+            throw new InvalidTransactionException(
+                    "A descrição da transferência é obrigatória"
+            );
+        }
+
+        String rejectionReason = null;
+
+        if (amount.compareTo(balance) > 0) {
+            rejectionReason = "Saldo insuficiente";
+
+        } else if (amount.compareTo(transactionLimit) > 0) {
+            rejectionReason = "Valor acima do limite por transação";
+
+        } else if (spentToday.add(amount).compareTo(dailyLimit) > 0) {
+            rejectionReason = "Limite diário excedido";
+        }
+
+        TransactionStatus status = rejectionReason == null ? TransactionStatus.APPROVED : TransactionStatus.REJECTED;
+
+        return new Transaction(
+                ownerUserId,
+                destinationUserId,
+                amount,
+                LocalDateTime.now(SAO_PAULO),
+                description.trim(),
+                TransactionCategory.TRANSFER,
+                TransactionType.TRANSFER,
                 status,
                 rejectionReason,
                 null
