@@ -39,15 +39,29 @@ public interface TransactionJpaRepository extends JpaRepository<TransactionJpaEn
     );
 
     @Query("""
-        SELECT t
-        FROM TransactionJpaEntity t
-        WHERE t.ownerUserId = :ownerUserId
-          AND (:type IS NULL OR t.type = :type)
-          AND (:start IS NULL OR t.occurredAt >= :start)
-          AND (:end IS NULL OR t.occurredAt < :end)
-        ORDER BY t.occurredAt DESC
-        """)
-    List<TransactionJpaEntity> findAllByOwnerUserIdAndFilters(
+    SELECT t
+    FROM TransactionJpaEntity t
+    WHERE t.ownerUserId = :ownerUserId
+      AND t.occurredAt >= :start
+      AND t.occurredAt < :end
+    ORDER BY t.occurredAt DESC
+    """)
+    List<TransactionJpaEntity> findAllByOwnerUserIdAndPeriod(
+            @Param("ownerUserId") Long ownerUserId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
+
+    @Query("""
+    SELECT t
+    FROM TransactionJpaEntity t
+    WHERE t.ownerUserId = :ownerUserId
+      AND t.type = :type
+      AND t.occurredAt >= :start
+      AND t.occurredAt < :end
+    ORDER BY t.occurredAt DESC
+    """)
+    List<TransactionJpaEntity> findAllByOwnerUserIdAndTypeAndPeriod(
             @Param("ownerUserId") Long ownerUserId,
             @Param("type") TransactionType type,
             @Param("start") LocalDateTime start,

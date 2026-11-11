@@ -22,17 +22,15 @@ public class ListTransactionsService implements ListTransactionsUseCase {
 
     @Override
     public List<Transaction> listByOwnerUserId(Long ownerUserId, TransactionType type, LocalDate startDate, LocalDate endDate) {
-
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            throw new InvalidTransactionException(
-                    "A data inicial não pode ser posterior à data final"
-            );
+            throw new InvalidTransactionException("A data inicial não pode ser posterior à data final");
         }
 
-        LocalDateTime start = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime start = startDate != null ? startDate.atStartOfDay() : LocalDate.of(1970, 1, 1).atStartOfDay();
 
-        LocalDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay() : null;
+        LocalDateTime end = endDate != null ? endDate.plusDays(1).atStartOfDay() : LocalDate.of(9999, 12, 31).atStartOfDay();
 
-        return transactionRepositoryPort.findAllByOwnerUserIdAndFilters(ownerUserId, type, start, end);
+        return transactionRepositoryPort.findAllByOwnerUserIdAndFilters(ownerUserId, type, start, end
+        );
     }
 }

@@ -20,25 +20,18 @@ class ListTransactionsServiceTest {
 
     @BeforeEach
     void setUp() {
-        transactionRepositoryPort =
-                mock(TransactionRepositoryPort.class);
+        transactionRepositoryPort = mock(TransactionRepositoryPort.class);
 
-        service =
-                new ListTransactionsService(
-                        transactionRepositoryPort
-                );
+        service = new ListTransactionsService(transactionRepositoryPort);
     }
 
     @Test
     void shouldListTransactionsUsingTypeAndPeriod() {
-        LocalDate startDate =
-                LocalDate.of(2026, 11, 1);
+        LocalDate startDate = LocalDate.of(2026, 11, 1);
 
-        LocalDate endDate =
-                LocalDate.of(2026, 11, 30);
+        LocalDate endDate = LocalDate.of(2026, 11, 30);
 
-        Transaction transaction =
-                mock(Transaction.class);
+        Transaction transaction = mock(Transaction.class);
 
         when(
                 transactionRepositoryPort

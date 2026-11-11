@@ -74,17 +74,20 @@ public class TransactionPersistenceAdapter implements TransactionRepositoryPort 
 
     @Override
     public List<Transaction> findAllByOwnerUserIdAndFilters(Long ownerUserId, TransactionType type, LocalDateTime start, LocalDateTime end) {
-        List<TransactionJpaEntity> entities = transactionJpaRepository.findAllByOwnerUserIdAndFilters(ownerUserId, type, start, end);
+        List<TransactionJpaEntity> entities;
+
+        if (type == null) {
+            entities = transactionJpaRepository.findAllByOwnerUserIdAndPeriod(ownerUserId, start, end);
+        } else {
+            entities = transactionJpaRepository.findAllByOwnerUserIdAndTypeAndPeriod(ownerUserId, type, start, end);
+        }
 
         List<Transaction> transactions = new ArrayList<>();
 
         for (TransactionJpaEntity entity : entities) {
-            transactions.add(
-                    TransactionPersistenceMapper.toDomain(entity)
-            );
+            transactions.add(TransactionPersistenceMapper.toDomain(entity));
         }
 
         return transactions;
     }
-
 }
