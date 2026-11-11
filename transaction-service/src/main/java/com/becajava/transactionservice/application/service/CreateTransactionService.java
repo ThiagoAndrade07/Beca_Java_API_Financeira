@@ -30,9 +30,7 @@ public class CreateTransactionService implements CreateTransactionUseCase {
     }
 
     @Override
-    public Transaction createTransaction(
-            CreateTransactionCommand command
-    ) {
+    public Transaction createTransaction(CreateTransactionCommand command) {
         Transaction transaction;
 
         if (TransactionType.DEPOSIT.equals(command.getType())) {
@@ -49,6 +47,9 @@ public class CreateTransactionService implements CreateTransactionUseCase {
         } else if (TransactionType.TRANSFER.equals(command.getType())) {
             transaction = createTransfer(command);
 
+        } else if (TransactionType.PURCHASE.equals(command.getType())) {
+            transaction = createPurchase(command);
+
         } else {
             throw new InvalidTransactionException(
                     "Tipo de transação ainda não suportado"
@@ -58,9 +59,8 @@ public class CreateTransactionService implements CreateTransactionUseCase {
         return transactionRepositoryPort.save(transaction);
     }
 
-    private Transaction createWithdrawal(
-            CreateTransactionCommand command
-    ) {
+    private Transaction createWithdrawal(CreateTransactionCommand command) {
+
         AccountBalance accountBalance =
                 accountBalancePort
                         .findByUserId(command.getOwnerUserId())
@@ -70,14 +70,11 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                                 )
                         );
 
-        LocalDate today =
-                LocalDate.now(SAO_PAULO);
+        LocalDate today = LocalDate.now(SAO_PAULO);
 
-        LocalDateTime startOfDay =
-                today.atStartOfDay();
+        LocalDateTime startOfDay = today.atStartOfDay();
 
-        LocalDateTime startOfNextDay =
-                today.plusDays(1).atStartOfDay();
+        LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
 
         BigDecimal spentToday =
                 transactionRepositoryPort
@@ -99,9 +96,7 @@ public class CreateTransactionService implements CreateTransactionUseCase {
         );
     }
 
-    private Transaction createTransfer(
-            CreateTransactionCommand command
-    ) {
+    private Transaction createTransfer(CreateTransactionCommand command) {
         AccountBalance accountBalance =
                 accountBalancePort
                         .findByUserId(command.getOwnerUserId())
@@ -111,14 +106,11 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                                 )
                         );
 
-        LocalDate today =
-                LocalDate.now(SAO_PAULO);
+        LocalDate today = LocalDate.now(SAO_PAULO);
 
-        LocalDateTime startOfDay =
-                today.atStartOfDay();
+        LocalDateTime startOfDay = today.atStartOfDay();
 
-        LocalDateTime startOfNextDay =
-                today.plusDays(1).atStartOfDay();
+        LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
 
         BigDecimal spentToday =
                 transactionRepositoryPort
@@ -139,4 +131,41 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                 spentToday
         );
     }
+
+    private Transaction createPurchase(CreateTransactionCommand command) {
+        AccountBalance accountBalance =
+                accountBalancePort
+                        .findByUserId(command.getOwnerUserId())
+                        .orElseThrow(
+                                () -> new InvalidTransactionException(
+                                        "Conta de saldo e limites não encontrada"
+                                )
+                        );
+
+        LocalDate today = LocalDate.now(SAO_PAULO);
+
+        LocalDateTime startOfDay = today.atStartOfDay();
+
+        LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
+
+        BigDecimal spentToday =
+                transactionRepositoryPort
+                        .sumApprovedOutgoingAmountByOwnerUserIdBetween(
+                                command.getOwnerUserId(),
+                                startOfDay,
+                                startOfNextDay
+                        );
+
+        return Transaction.createPurchase(
+                command.getOwnerUserId(),
+                command.getAmount(),
+                command.getDescription(),
+                command.getCategory(),
+                accountBalance.getBalance(),
+                accountBalance.getTransactionLimit(),
+                accountBalance.getDailyLimit(),
+                spentToday
+        );
+    }
 }
+

@@ -228,6 +228,64 @@ public class Transaction {
         );
     }
 
+    public static Transaction createPurchase(
+            Long ownerUserId,
+            BigDecimal amount,
+            String description,
+            TransactionCategory category,
+            BigDecimal balance,
+            BigDecimal transactionLimit,
+            BigDecimal dailyLimit,
+            BigDecimal spentToday
+    ) {
+        if (ownerUserId == null) {
+            throw new InvalidTransactionException("O usuário dono da compra é obrigatório");
+        }
+
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidTransactionException("O valor da compra deve ser maior que zero");
+        }
+
+        if (description == null || description.isBlank()) {
+            throw new InvalidTransactionException("A descrição da compra é obrigatória");
+        }
+
+        if (
+                category == null
+                        || category == TransactionCategory.INCOME
+                        || category == TransactionCategory.TRANSFER
+        ) {
+            throw new InvalidTransactionException("A compra deve utilizar uma categoria de despesa");
+        }
+
+        String rejectionReason = null;
+
+        if (amount.compareTo(balance) > 0) {
+            rejectionReason = "Saldo insuficiente";
+
+        } else if (amount.compareTo(transactionLimit) > 0) {
+            rejectionReason = "Valor acima do limite por transação";
+
+        } else if (spentToday.add(amount).compareTo(dailyLimit) > 0) {
+            rejectionReason = "Limite diário excedido";
+        }
+
+        TransactionStatus status = rejectionReason == null ? TransactionStatus.APPROVED : TransactionStatus.REJECTED;
+
+        return new Transaction(
+                ownerUserId,
+                null,
+                amount,
+                LocalDateTime.now(SAO_PAULO),
+                description.trim(),
+                category,
+                TransactionType.PURCHASE,
+                status,
+                rejectionReason,
+                null
+        );
+    }
+
     public Long getId() {
         return id;
     }

@@ -43,10 +43,7 @@ public class TransactionTest {
                 )
         );
 
-        assertEquals(
-                "A categoria de um depósito deve ser INCOME",
-                exception.getMessage()
-        );
+        assertEquals("A categoria de um depósito deve ser INCOME", exception.getMessage());
     }
 
     @Test
@@ -84,10 +81,7 @@ public class TransactionTest {
                 )
         );
 
-        assertEquals(
-                "O usuário dono da transação é obrigatório",
-                exception.getMessage()
-        );
+        assertEquals("O usuário dono da transação é obrigatório", exception.getMessage());
     }
 
     @Test
@@ -102,10 +96,7 @@ public class TransactionTest {
                 )
         );
 
-        assertEquals(
-                "A descrição do depósito é obrigatória",
-                exception.getMessage()
-        );
+        assertEquals("A descrição do depósito é obrigatória", exception.getMessage());
     }
 
     @Test
@@ -121,14 +112,8 @@ public class TransactionTest {
                 new BigDecimal("200.00")
         );
 
-        assertEquals(
-                TransactionType.WITHDRAWAL,
-                transaction.getType()
-        );
-        assertEquals(
-                TransactionStatus.APPROVED,
-                transaction.getStatus()
-        );
+        assertEquals(TransactionType.WITHDRAWAL, transaction.getType());
+        assertEquals(TransactionStatus.APPROVED, transaction.getStatus());
         assertNull(transaction.getRejectionReason());
     }
 
@@ -145,14 +130,8 @@ public class TransactionTest {
                 BigDecimal.ZERO
         );
 
-        assertEquals(
-                TransactionStatus.REJECTED,
-                transaction.getStatus()
-        );
-        assertEquals(
-                "Saldo insuficiente",
-                transaction.getRejectionReason()
-        );
+        assertEquals(TransactionStatus.REJECTED, transaction.getStatus());
+        assertEquals("Saldo insuficiente", transaction.getRejectionReason());
     }
 
     @Test
@@ -168,14 +147,8 @@ public class TransactionTest {
                 BigDecimal.ZERO
         );
 
-        assertEquals(
-                TransactionStatus.REJECTED,
-                transaction.getStatus()
-        );
-        assertEquals(
-                "Valor acima do limite por transação",
-                transaction.getRejectionReason()
-        );
+        assertEquals(TransactionStatus.REJECTED, transaction.getStatus());
+        assertEquals("Valor acima do limite por transação", transaction.getRejectionReason());
     }
 
     @Test
@@ -191,14 +164,8 @@ public class TransactionTest {
                 new BigDecimal("800.00")
         );
 
-        assertEquals(
-                TransactionStatus.REJECTED,
-                transaction.getStatus()
-        );
-        assertEquals(
-                "Limite diário excedido",
-                transaction.getRejectionReason()
-        );
+        assertEquals(TransactionStatus.REJECTED, transaction.getStatus());
+        assertEquals("Limite diário excedido", transaction.getRejectionReason());
     }
 
     @Test
@@ -214,40 +181,19 @@ public class TransactionTest {
                 new BigDecimal("200.00")
         );
 
-        assertEquals(
-                7L,
-                transaction.getOwnerUserId()
-        );
+        assertEquals(7L, transaction.getOwnerUserId());
 
-        assertEquals(
-                8L,
-                transaction.getDestinationUserId()
-        );
+        assertEquals(8L, transaction.getDestinationUserId());
 
-        assertEquals(
-                new BigDecimal("300.00"),
-                transaction.getAmount()
-        );
+        assertEquals(new BigDecimal("300.00"), transaction.getAmount());
 
-        assertEquals(
-                "Transferência para outro usuário",
-                transaction.getDescription()
-        );
+        assertEquals("Transferência para outro usuário", transaction.getDescription());
 
-        assertEquals(
-                TransactionType.TRANSFER,
-                transaction.getType()
-        );
+        assertEquals(TransactionType.TRANSFER, transaction.getType());
 
-        assertEquals(
-                TransactionCategory.TRANSFER,
-                transaction.getCategory()
-        );
+        assertEquals(TransactionCategory.TRANSFER, transaction.getCategory());
 
-        assertEquals(
-                TransactionStatus.APPROVED,
-                transaction.getStatus()
-        );
+        assertEquals(TransactionStatus.APPROVED, transaction.getStatus());
 
         assertNotNull(transaction.getOccurredAt());
         assertNull(transaction.getRejectionReason());
@@ -267,25 +213,13 @@ public class TransactionTest {
                 BigDecimal.ZERO
         );
 
-        assertEquals(
-                TransactionStatus.REJECTED,
-                transaction.getStatus()
-        );
+        assertEquals(TransactionStatus.REJECTED, transaction.getStatus());
 
-        assertEquals(
-                "Saldo insuficiente",
-                transaction.getRejectionReason()
-        );
+        assertEquals("Saldo insuficiente", transaction.getRejectionReason());
 
-        assertEquals(
-                TransactionType.TRANSFER,
-                transaction.getType()
-        );
+        assertEquals(TransactionType.TRANSFER, transaction.getType());
 
-        assertEquals(
-                8L,
-                transaction.getDestinationUserId()
-        );
+        assertEquals(8L, transaction.getDestinationUserId());
     }
 
     @Test
@@ -301,15 +235,9 @@ public class TransactionTest {
                 BigDecimal.ZERO
         );
 
-        assertEquals(
-                TransactionStatus.REJECTED,
-                transaction.getStatus()
-        );
+        assertEquals(TransactionStatus.REJECTED, transaction.getStatus());
 
-        assertEquals(
-                "Valor acima do limite por transação",
-                transaction.getRejectionReason()
-        );
+        assertEquals("Valor acima do limite por transação", transaction.getRejectionReason());
     }
 
     @Test
@@ -325,14 +253,106 @@ public class TransactionTest {
                 new BigDecimal("800.00")
         );
 
-        assertEquals(
-                TransactionStatus.REJECTED,
-                transaction.getStatus()
+        assertEquals(TransactionStatus.REJECTED, transaction.getStatus());
+
+        assertEquals("Limite diário excedido", transaction.getRejectionReason());
+    }
+
+    @Test
+    void shouldCreateApprovedPurchase() {
+        Transaction transaction = Transaction.createPurchase(
+                7L,
+                new BigDecimal("300.00"),
+                "  Compra no mercado  ",
+                TransactionCategory.FOOD,
+                new BigDecimal("1000.00"),
+                new BigDecimal("500.00"),
+                new BigDecimal("1000.00"),
+                new BigDecimal("200.00")
         );
 
-        assertEquals(
-                "Limite diário excedido",
-                transaction.getRejectionReason()
+        assertEquals(7L, transaction.getOwnerUserId());
+        assertEquals(new BigDecimal("300.00"), transaction.getAmount());
+        assertEquals("Compra no mercado", transaction.getDescription());
+        assertEquals(TransactionCategory.FOOD, transaction.getCategory());
+        assertEquals(TransactionType.PURCHASE, transaction.getType());
+        assertEquals(TransactionStatus.APPROVED, transaction.getStatus());
+
+        assertNull(transaction.getDestinationUserId());
+        assertNull(transaction.getRejectionReason());
+    }
+
+    @Test
+    void shouldRejectPurchaseWithInvalidCategory() {
+        InvalidTransactionException exception =
+                assertThrows(
+                        InvalidTransactionException.class,
+                        () -> Transaction.createPurchase(
+                                7L,
+                                new BigDecimal("300.00"),
+                                "Compra com categoria inválida",
+                                TransactionCategory.INCOME,
+                                new BigDecimal("1000.00"),
+                                new BigDecimal("500.00"),
+                                new BigDecimal("1000.00"),
+                                BigDecimal.ZERO
+                        )
+                );
+
+        assertEquals("A compra deve utilizar uma categoria de despesa", exception.getMessage());
+    }
+
+    @Test
+    void shouldSaveRejectedPurchaseWithInsufficientBalance() {
+        Transaction transaction = Transaction.createPurchase(
+                7L,
+                new BigDecimal("600.00"),
+                "Compra sem saldo",
+                TransactionCategory.FOOD,
+                new BigDecimal("500.00"),
+                new BigDecimal("1000.00"),
+                new BigDecimal("2000.00"),
+                BigDecimal.ZERO
         );
+
+        assertEquals(TransactionStatus.REJECTED, transaction.getStatus());
+
+        assertEquals("Saldo insuficiente", transaction.getRejectionReason());
+    }
+
+    @Test
+    void shouldSaveRejectedPurchaseAboveTransactionLimit() {
+        Transaction transaction = Transaction.createPurchase(
+                7L,
+                new BigDecimal("600.00"),
+                "Compra acima do limite",
+                TransactionCategory.SERVICES,
+                new BigDecimal("2000.00"),
+                new BigDecimal("500.00"),
+                new BigDecimal("2000.00"),
+                BigDecimal.ZERO
+        );
+
+        assertEquals(TransactionStatus.REJECTED, transaction.getStatus());
+
+        assertEquals("Valor acima do limite por transação", transaction.getRejectionReason());
+    }
+
+    @Test
+    void shouldSaveRejectedPurchaseAboveDailyLimit() {
+        Transaction transaction = Transaction.createPurchase(
+                7L,
+                new BigDecimal("300.00"),
+                "Compra acima do limite diário",
+                TransactionCategory.TRANSPORT,
+                new BigDecimal("2000.00"),
+                new BigDecimal("500.00"),
+                new BigDecimal("1000.00"),
+                new BigDecimal("800.00")
+        );
+
+        assertEquals(TransactionStatus.REJECTED, transaction.getStatus());
+
+        assertEquals("Limite diário excedido", transaction.getRejectionReason());
     }
 }
