@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import com.becajava.transactionservice.application.exception.AccountServiceUnavailableException;
 import com.becajava.transactionservice.application.model.AccountBalance;
-
+import static org.mockito.Mockito.never;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -59,6 +59,17 @@ class CreateTransactionServiceTest {
                         TransactionType.DEPOSIT,
                         null
                 );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("5000.00"),
+                        new BigDecimal("2000.00"),
+                        new BigDecimal("1000.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L))
+                .thenReturn(Optional.of(accountBalance));
 
         when(transactionRepositoryPort.save(any(Transaction.class)))
                 .thenAnswer(invocation -> {
@@ -108,7 +119,9 @@ class CreateTransactionServiceTest {
 
         assertEquals(10L, result.getId());
 
-        verifyNoInteractions(accountBalancePort);
+        verify(accountBalancePort).findByUserId(7L);
+
+        verify(accountBalancePort).updateBalance(7L, new BigDecimal("5500.00"));
     }
 
     @Test
@@ -175,6 +188,8 @@ class CreateTransactionServiceTest {
         verify(accountBalancePort).findByUserId(7L);
 
         verify(transactionRepositoryPort).save(any(Transaction.class));
+
+        verify(accountBalancePort).updateBalance(7L, new BigDecimal("700.00"));
     }
 
     @Test
@@ -216,6 +231,8 @@ class CreateTransactionServiceTest {
         assertEquals("Saldo insuficiente", result.getRejectionReason());
 
         verify(transactionRepositoryPort).save(any(Transaction.class));
+
+        verify(accountBalancePort, never()).updateBalance(eq(7L), any(BigDecimal.class));
     }
 
     @Test
@@ -262,8 +279,16 @@ class CreateTransactionServiceTest {
                         new BigDecimal("500.00")
                 );
 
-        when(accountBalancePort.findByUserId(7L)).thenReturn(Optional.of(accountBalance));
+        AccountBalance destinationAccount =
+                new AccountBalance(
+                        8L,
+                        new BigDecimal("500.00"),
+                        new BigDecimal("1000.00"),
+                        new BigDecimal("500.00")
+                );
 
+        when(accountBalancePort.findByUserId(7L)).thenReturn(Optional.of(accountBalance));
+        when(accountBalancePort.findByUserId(8L)).thenReturn(Optional.of(destinationAccount));
         when(
                 transactionRepositoryPort
                         .sumApprovedOutgoingAmountByOwnerUserIdBetween(
@@ -307,6 +332,12 @@ class CreateTransactionServiceTest {
                         any(LocalDateTime.class),
                         any(LocalDateTime.class)
                 );
+
+        verify(accountBalancePort).findByUserId(8L);
+
+        verify(accountBalancePort).updateBalance(7L, new BigDecimal("700.00"));
+
+        verify(accountBalancePort).updateBalance(8L, new BigDecimal("800.00"));
     }
 
     @Test

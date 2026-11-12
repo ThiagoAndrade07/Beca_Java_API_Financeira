@@ -1,6 +1,7 @@
 package com.becajava.transactionservice.adapter.in.web.exception;
 
 import com.becajava.transactionservice.adapter.in.web.dto.ApiErrorResponse;
+import com.becajava.transactionservice.application.exception.AccountBalanceNotFoundException;
 import com.becajava.transactionservice.application.exception.AccountServiceUnavailableException;
 import com.becajava.transactionservice.domain.exception.InvalidTransactionException;
 import com.becajava.transactionservice.domain.exception.TransactionNotFoundException;
@@ -43,6 +44,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TransactionNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleTransactionNotFound(
             TransactionNotFoundException exception
+    ) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                exception.getMessage(),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(response);
+    }
+
+    @ExceptionHandler(AccountBalanceNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccountBalanceNotFound(
+            AccountBalanceNotFoundException exception
     ) {
         ApiErrorResponse response = new ApiErrorResponse(
                 HttpStatus.NOT_FOUND.value(),

@@ -4,6 +4,7 @@ import com.becajava.transactionservice.application.model.AccountBalance;
 import com.becajava.transactionservice.application.model.CreateTransactionCommand;
 import com.becajava.transactionservice.domain.exception.InvalidTransactionException;
 import com.becajava.transactionservice.domain.model.Transaction;
+import com.becajava.transactionservice.domain.model.TransactionStatus;
 import com.becajava.transactionservice.domain.model.TransactionType;
 import com.becajava.transactionservice.port.in.CreateTransactionUseCase;
 import com.becajava.transactionservice.port.out.AccountBalancePort;
@@ -34,12 +35,7 @@ public class CreateTransactionService implements CreateTransactionUseCase {
         Transaction transaction;
 
         if (TransactionType.DEPOSIT.equals(command.getType())) {
-            transaction = Transaction.createDeposit(
-                    command.getOwnerUserId(),
-                    command.getAmount(),
-                    command.getDescription(),
-                    command.getCategory()
-            );
+            transaction = createDeposit(command);
 
         } else if (TransactionType.WITHDRAWAL.equals(command.getType())) {
             transaction = createWithdrawal(command);
@@ -57,6 +53,29 @@ public class CreateTransactionService implements CreateTransactionUseCase {
         }
 
         return transactionRepositoryPort.save(transaction);
+    }
+
+    private Transaction createDeposit(CreateTransactionCommand command) {
+        AccountBalance accountBalance =
+                accountBalancePort.findByUserId(command.getOwnerUserId())
+                        .orElseThrow(
+                                () -> new InvalidTransactionException(
+                                        "Conta de saldo e limites não encontrada"
+                                )
+                        );
+
+        Transaction transaction = Transaction.createDeposit(
+                command.getOwnerUserId(),
+                command.getAmount(),
+                command.getDescription(),
+                command.getCategory()
+        );
+
+        BigDecimal newBalance = accountBalance.getBalance().add(command.getAmount());
+
+        accountBalancePort.updateBalance(command.getOwnerUserId(), newBalance);
+
+        return transaction;
     }
 
     private Transaction createWithdrawal(CreateTransactionCommand command) {
@@ -84,7 +103,7 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                                 startOfNextDay
                         );
 
-        return Transaction.createWithdrawal(
+        Transaction transaction = Transaction.createWithdrawal(
                 command.getOwnerUserId(),
                 command.getAmount(),
                 command.getDescription(),
@@ -94,6 +113,14 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                 accountBalance.getDailyLimit(),
                 spentToday
         );
+
+        if (TransactionStatus.APPROVED.equals(transaction.getStatus())) {
+            BigDecimal newBalance = accountBalance.getBalance().subtract(command.getAmount());
+
+            accountBalancePort.updateBalance(command.getOwnerUserId(), newBalance);
+        }
+
+        return transaction;
     }
 
     private Transaction createTransfer(CreateTransactionCommand command) {
@@ -120,7 +147,7 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                                 startOfNextDay
                         );
 
-        return Transaction.createTransfer(
+        Transaction transaction = Transaction.createTransfer(
                 command.getOwnerUserId(),
                 command.getDestinationUserId(),
                 command.getAmount(),
@@ -130,6 +157,27 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                 accountBalance.getDailyLimit(),
                 spentToday
         );
+
+        if (TransactionStatus.APPROVED.equals(transaction.getStatus())) {
+            AccountBalance destinationAccount =
+                    accountBalancePort
+                            .findByUserId(command.getDestinationUserId())
+                            .orElseThrow(
+                                    () -> new InvalidTransactionException(
+                                            "Conta do usuário destinatário não encontrada"
+                                    )
+                            );
+
+            BigDecimal newOwnerBalance = accountBalance.getBalance().subtract(command.getAmount());
+
+            BigDecimal newDestinationBalance = destinationAccount.getBalance().add(command.getAmount());
+
+            accountBalancePort.updateBalance(command.getOwnerUserId(), newOwnerBalance);
+
+            accountBalancePort.updateBalance(command.getDestinationUserId(), newDestinationBalance);
+        }
+
+        return transaction;
     }
 
     private Transaction createPurchase(CreateTransactionCommand command) {

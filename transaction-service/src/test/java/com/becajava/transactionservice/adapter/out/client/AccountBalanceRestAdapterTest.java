@@ -11,14 +11,11 @@ import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.ExpectedCount.once;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AccountBalanceRestAdapterTest {
 
@@ -109,6 +106,53 @@ class AccountBalanceRestAdapterTest {
                 .andRespond(withServerError());
 
         assertThrows(AccountServiceUnavailableException.class, () -> accountBalanceRestAdapter.findByUserId(7L));
+
+        mockServer.verify();
+    }
+
+    @Test
+    void shouldUpdateAccountBalanceByUserId() {
+        String responseBody = """
+            [
+              {
+                "id": "1",
+                "userId": 7,
+                "balance": 5000.00,
+                "dailyLimit": 2000.00,
+                "transactionLimit": 1000.00
+              }
+            ]
+            """;
+
+        mockServer.expect(
+                        once(),
+                        requestTo("http://mock-api/accounts?userId=7")
+                )
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(
+                        withSuccess(
+                                responseBody,
+                                MediaType.APPLICATION_JSON
+                        )
+                );
+
+        mockServer.expect(
+                        once(),
+                        requestTo("http://mock-api/accounts/1")
+                )
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(
+                        content().json(
+                                """
+                                {
+                                  "balance": 4700.00
+                                }
+                                """
+                        )
+                )
+                .andRespond(withSuccess());
+
+        accountBalanceRestAdapter.updateBalance(7L, new BigDecimal("4700.00"));
 
         mockServer.verify();
     }
