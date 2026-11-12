@@ -147,13 +147,8 @@ public class GlobalExceptionHandler {
         LOGGER.error("Erro inesperado ao processar a requisição", exception);
 
         ApiErrorResponse response = new ApiErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Ocorreu um erro interno no servidor",
-                Map.of()
-        );
+                HttpStatus.INTERNAL_SERVER_ERROR.value(), "Ocorreu um erro interno no servidor", Map.of());
 
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(response);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }
