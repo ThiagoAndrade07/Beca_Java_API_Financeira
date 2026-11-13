@@ -11,7 +11,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -44,6 +48,37 @@ services:
       - "5435:5432"
     volumes:
       - transaction_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  transaction-service:
+    build:
+      context: ./transaction-service
+      dockerfile: Dockerfile
+    container_name: beca-java-transaction-service
+    environment:
+      TRANSACTION_POSTGRES_DB: ${TRANSACTION_POSTGRES_DB}
+      TRANSACTION_POSTGRES_USER: ${TRANSACTION_POSTGRES_USER}
+      TRANSACTION_POSTGRES_PASSWORD: ${TRANSACTION_POSTGRES_PASSWORD}
+      TRANSACTION_DB_HOST: transaction-postgres
+      TRANSACTION_DB_PORT: 5432
+      USER_SERVICE_BASE_URL: http://user-service:8081
+      MOCK_API_BASE_URL: ${MOCK_API_BASE_URL}
+      BRASIL_API_BASE_URL: ${BRASIL_API_BASE_URL:-https://brasilapi.com.br/api}
+    ports:
+      - "8082:8082"
+    depends_on:
+      transaction-postgres:
+        condition: service_healthy
+      user-service:
+        condition: service_started
 
 volumes:
   postgres_data:

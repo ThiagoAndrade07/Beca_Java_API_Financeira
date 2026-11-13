@@ -1,0 +1,562 @@
+package com.becajava.transactionservice.application.service;
+
+import com.becajava.transactionservice.application.exception.AccountServiceUnavailableException;
+import com.becajava.transactionservice.application.exception.ExchangeServiceUnavailableException;
+import com.becajava.transactionservice.application.model.AccountBalance;
+import com.becajava.transactionservice.application.model.CreateTransactionCommand;
+import com.becajava.transactionservice.application.model.ExchangeRateResult;
+import com.becajava.transactionservice.domain.exception.InvalidTransactionException;
+import com.becajava.transactionservice.domain.model.Transaction;
+import com.becajava.transactionservice.domain.model.TransactionCategory;
+import com.becajava.transactionservice.domain.model.TransactionStatus;
+import com.becajava.transactionservice.domain.model.TransactionType;
+import com.becajava.transactionservice.port.out.AccountBalancePort;
+import com.becajava.transactionservice.port.out.ExchangeRatePort;
+import com.becajava.transactionservice.port.out.TransactionRepositoryPort;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+class CreateTransactionServiceTest {
+
+    private TransactionRepositoryPort transactionRepositoryPort;
+    private AccountBalancePort accountBalancePort;
+    private CreateTransactionService createTransactionService;
+    private ExchangeRatePort exchangeRatePort;
+
+    @BeforeEach
+    void setUp() {
+        transactionRepositoryPort = mock(TransactionRepositoryPort.class);
+
+        accountBalancePort = mock(AccountBalancePort.class);
+
+        exchangeRatePort = mock(ExchangeRatePort.class);
+
+        when(
+                exchangeRatePort.getSellingRate(
+                        eq("USD"),
+                        any(LocalDate.class)
+                )
+        ).thenReturn(
+                new ExchangeRateResult(
+                        "USD",
+                        new BigDecimal("5.00"),
+                        LocalDate.of(2026, 11, 12)
+                )
+        );
+
+        when(
+                exchangeRatePort.getSellingRate(
+                        eq("EUR"),
+                        any(LocalDate.class)
+                )
+        ).thenReturn(
+                new ExchangeRateResult(
+                        "EUR",
+                        new BigDecimal("10.00"),
+                        LocalDate.of(2026, 11, 12)
+                )
+        );
+
+        createTransactionService =
+                new CreateTransactionService(
+                        transactionRepositoryPort,
+                        accountBalancePort,
+                        exchangeRatePort
+                );
+    }
+
+    @Test
+    void shouldCreateAndSaveDeposit() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("500.00"),
+                        "Depósito inicial",
+                        TransactionCategory.INCOME,
+                        TransactionType.DEPOSIT,
+                        null
+                );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("5000.00"),
+                        new BigDecimal("2000.00"),
+                        new BigDecimal("1000.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L))
+                .thenReturn(Optional.of(accountBalance));
+
+        when(transactionRepositoryPort.save(any(Transaction.class)))
+                .thenAnswer(invocation -> {
+                    Transaction transaction =
+                            invocation.getArgument(0);
+
+                    return new Transaction(
+                            10L,
+                            transaction.getOwnerUserId(),
+                            transaction.getDestinationUserId(),
+                            transaction.getAmount(),
+                            transaction.getOccurredAt(),
+                            transaction.getDescription(),
+                            transaction.getCategory(),
+                            transaction.getType(),
+                            transaction.getStatus(),
+                            transaction.getRejectionReason(),
+                            transaction.getReversedTransactionId()
+                    );
+                });
+
+        Transaction result = createTransactionService.createTransaction(command);
+
+        ArgumentCaptor<Transaction> transactionCaptor = ArgumentCaptor.forClass(Transaction.class);
+
+        verify(transactionRepositoryPort).save(transactionCaptor.capture());
+
+        Transaction transactionSentToRepository = transactionCaptor.getValue();
+
+        assertEquals(7L, transactionSentToRepository.getOwnerUserId());
+
+        assertEquals(new BigDecimal("500.00"), transactionSentToRepository.getAmount());
+
+        assertEquals("Depósito inicial", transactionSentToRepository.getDescription());
+
+        assertEquals(TransactionType.DEPOSIT, transactionSentToRepository.getType());
+
+        assertEquals(TransactionStatus.APPROVED, transactionSentToRepository.getStatus());
+
+        assertEquals(TransactionCategory.INCOME, transactionSentToRepository.getCategory());
+
+        assertNull(transactionSentToRepository.getDestinationUserId());
+
+        assertNull(transactionSentToRepository.getRejectionReason());
+
+        assertNull(transactionSentToRepository.getReversedTransactionId());
+
+        assertEquals(10L, result.getId());
+
+        verify(accountBalancePort).findByUserId(7L);
+
+        verify(accountBalancePort).updateBalance(7L, new BigDecimal("5500.00"));
+    }
+
+    @Test
+    void shouldRejectMissingTransactionTypeWithoutSaving() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("100.00"),
+                        "Transação sem tipo",
+                        TransactionCategory.OTHER,
+                        null,
+                        null
+                );
+
+        InvalidTransactionException exception =
+                assertThrows(
+                        InvalidTransactionException.class,
+                        () -> createTransactionService.createTransaction(command)
+                );
+
+        assertEquals("Tipo de transação ainda não suportado", exception.getMessage());
+
+        verifyNoInteractions(transactionRepositoryPort, accountBalancePort);
+    }
+
+    @Test
+    void shouldCreateApprovedWithdrawal() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("300.00"),
+                        "Retirada aprovada",
+                        TransactionCategory.OTHER,
+                        TransactionType.WITHDRAWAL,
+                        null
+                );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("1000.00"),
+                        new BigDecimal("1000.00"),
+                        new BigDecimal("500.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L)).thenReturn(Optional.of(accountBalance));
+
+        when(
+                transactionRepositoryPort
+                        .sumApprovedOutgoingAmountByOwnerUserIdBetween(
+                                eq(7L),
+                                any(LocalDateTime.class),
+                                any(LocalDateTime.class)
+                        )
+        ).thenReturn(new BigDecimal("200.00"));
+
+        when(transactionRepositoryPort.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction result = createTransactionService.createTransaction(command);
+
+        assertEquals(TransactionStatus.APPROVED, result.getStatus());
+        assertNull(result.getRejectionReason());
+
+        verify(accountBalancePort).findByUserId(7L);
+
+        verify(transactionRepositoryPort).save(any(Transaction.class));
+
+        verify(accountBalancePort).updateBalance(7L, new BigDecimal("700.00"));
+    }
+
+    @Test
+    void shouldSaveRejectedWithdrawalWhenBalanceIsInsufficient() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("600.00"),
+                        "Retirada sem saldo",
+                        TransactionCategory.OTHER,
+                        TransactionType.WITHDRAWAL,
+                        null
+                );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("500.00"),
+                        new BigDecimal("2000.00"),
+                        new BigDecimal("1000.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L)).thenReturn(Optional.of(accountBalance));
+
+        when(
+                transactionRepositoryPort
+                        .sumApprovedOutgoingAmountByOwnerUserIdBetween(
+                                eq(7L),
+                                any(LocalDateTime.class),
+                                any(LocalDateTime.class)
+                        )
+        ).thenReturn(BigDecimal.ZERO);
+
+        when(transactionRepositoryPort.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction result = createTransactionService.createTransaction(command);
+
+        assertEquals(TransactionStatus.REJECTED, result.getStatus());
+        assertEquals("Saldo insuficiente", result.getRejectionReason());
+
+        verify(transactionRepositoryPort).save(any(Transaction.class));
+
+        verify(accountBalancePort, never()).updateBalance(eq(7L), any(BigDecimal.class));
+    }
+
+    @Test
+    void shouldNotSaveWhenAccountServiceIsUnavailable() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("300.00"),
+                        "Retirada",
+                        TransactionCategory.OTHER,
+                        TransactionType.WITHDRAWAL,
+                        null
+                );
+
+        when(accountBalancePort.findByUserId(7L))
+                .thenThrow(
+                        new AccountServiceUnavailableException(
+                                new RuntimeException("Falha simulada")
+                        )
+                );
+
+        assertThrows(AccountServiceUnavailableException.class, () -> createTransactionService.createTransaction(command));
+
+        verifyNoInteractions(transactionRepositoryPort);
+    }
+
+    @Test
+    void shouldCreateAndSaveApprovedTransfer() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("300.00"),
+                        "Transferência aprovada",
+                        TransactionCategory.TRANSFER,
+                        TransactionType.TRANSFER,
+                        8L
+                );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("1000.00"),
+                        new BigDecimal("1000.00"),
+                        new BigDecimal("500.00")
+                );
+
+        AccountBalance destinationAccount =
+                new AccountBalance(
+                        8L,
+                        new BigDecimal("500.00"),
+                        new BigDecimal("1000.00"),
+                        new BigDecimal("500.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L)).thenReturn(Optional.of(accountBalance));
+        when(accountBalancePort.findByUserId(8L)).thenReturn(Optional.of(destinationAccount));
+        when(
+                transactionRepositoryPort
+                        .sumApprovedOutgoingAmountByOwnerUserIdBetween(
+                                eq(7L),
+                                any(LocalDateTime.class),
+                                any(LocalDateTime.class)
+                        )
+        ).thenReturn(new BigDecimal("200.00"));
+
+        when(transactionRepositoryPort.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction result = createTransactionService.createTransaction(command);
+
+        ArgumentCaptor<Transaction> transactionCaptor = ArgumentCaptor.forClass(Transaction.class);
+
+        verify(transactionRepositoryPort).save(transactionCaptor.capture());
+
+        Transaction transactionSentToRepository = transactionCaptor.getValue();
+
+        assertEquals(7L, transactionSentToRepository.getOwnerUserId());
+
+        assertEquals(8L, transactionSentToRepository.getDestinationUserId());
+
+        assertEquals(new BigDecimal("300.00"), transactionSentToRepository.getAmount());
+
+        assertEquals(TransactionType.TRANSFER, transactionSentToRepository.getType());
+
+        assertEquals(TransactionCategory.TRANSFER, transactionSentToRepository.getCategory());
+
+        assertEquals(TransactionStatus.APPROVED, transactionSentToRepository.getStatus());
+
+        assertNull(transactionSentToRepository.getRejectionReason());
+
+        assertEquals(TransactionStatus.APPROVED, result.getStatus());
+
+        verify(accountBalancePort).findByUserId(7L);
+
+        verify(transactionRepositoryPort)
+                .sumApprovedOutgoingAmountByOwnerUserIdBetween(
+                        eq(7L),
+                        any(LocalDateTime.class),
+                        any(LocalDateTime.class)
+                );
+
+        verify(accountBalancePort).findByUserId(8L);
+
+        verify(accountBalancePort).updateBalance(7L, new BigDecimal("700.00"));
+
+        verify(accountBalancePort).updateBalance(8L, new BigDecimal("800.00"));
+    }
+
+    @Test
+    void shouldCreateAndSaveApprovedPurchase() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("300.00"),
+                        "Compra no mercado",
+                        TransactionCategory.FOOD,
+                        TransactionType.PURCHASE,
+                        null
+                );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("1000.00"),
+                        new BigDecimal("1000.00"),
+                        new BigDecimal("500.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L))
+                .thenReturn(Optional.of(accountBalance));
+
+        when(
+                transactionRepositoryPort
+                        .sumApprovedOutgoingAmountByOwnerUserIdBetween(
+                                eq(7L),
+                                any(LocalDateTime.class),
+                                any(LocalDateTime.class)
+                        )
+        ).thenReturn(new BigDecimal("200.00"));
+
+        when(transactionRepositoryPort.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction result = createTransactionService.createTransaction(command);
+
+        ArgumentCaptor<Transaction> transactionCaptor = ArgumentCaptor.forClass(Transaction.class);
+
+        verify(transactionRepositoryPort).save(transactionCaptor.capture());
+
+        Transaction transactionSentToRepository = transactionCaptor.getValue();
+
+        assertEquals(7L, transactionSentToRepository.getOwnerUserId());
+
+        assertNull(transactionSentToRepository.getDestinationUserId());
+
+        assertEquals(new BigDecimal("300.00"), transactionSentToRepository.getAmount());
+
+        assertEquals(TransactionType.PURCHASE, transactionSentToRepository.getType());
+
+        assertEquals(TransactionCategory.FOOD, transactionSentToRepository.getCategory());
+
+        assertEquals(TransactionStatus.APPROVED, transactionSentToRepository.getStatus());
+
+        assertNull(transactionSentToRepository.getRejectionReason());
+
+        assertEquals(TransactionStatus.APPROVED, result.getStatus());
+
+        verify(accountBalancePort).findByUserId(7L);
+
+        verify(transactionRepositoryPort)
+                .sumApprovedOutgoingAmountByOwnerUserIdBetween(
+                        eq(7L),
+                        any(LocalDateTime.class),
+                        any(LocalDateTime.class)
+                );
+
+        verify(accountBalancePort)
+                .updateBalance(
+                        7L,
+                        new BigDecimal("700.00")
+                );
+    }
+
+    @Test
+    void shouldAttachUsdAndEurConversionsToTransaction() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("100.00"),
+                        "Depósito com conversão",
+                        TransactionCategory.INCOME,
+                        TransactionType.DEPOSIT,
+                        null
+                );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("500.00"),
+                        new BigDecimal("2000.00"),
+                        new BigDecimal("1000.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L))
+                .thenReturn(Optional.of(accountBalance));
+
+        when(transactionRepositoryPort.save(any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction result =
+                createTransactionService.createTransaction(command);
+
+        assertNotNull(result.getExchangeSnapshot());
+        assertTrue(result.getExchangeSnapshot().isAvailable());
+
+        assertEquals(
+                new BigDecimal("20.00"),
+                result.getExchangeSnapshot()
+                        .getUsd()
+                        .getConvertedAmount()
+        );
+
+        assertEquals(
+                new BigDecimal("10.00"),
+                result.getExchangeSnapshot()
+                        .getEur()
+                        .getConvertedAmount()
+        );
+
+        verify(exchangeRatePort).getSellingRate(
+                eq("USD"),
+                any(LocalDate.class)
+        );
+
+        verify(exchangeRatePort).getSellingRate(
+                eq("EUR"),
+                any(LocalDate.class)
+        );
+    }
+
+    @Test
+    void shouldSaveTransactionWhenExchangeServiceIsUnavailable() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("100.00"),
+                        "Depósito sem conversão disponível",
+                        TransactionCategory.INCOME,
+                        TransactionType.DEPOSIT,
+                        null
+                );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("500.00"),
+                        new BigDecimal("2000.00"),
+                        new BigDecimal("1000.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L))
+                .thenReturn(Optional.of(accountBalance));
+
+        when(
+                exchangeRatePort.getSellingRate(
+                        eq("USD"),
+                        any(LocalDate.class)
+                )
+        ).thenThrow(new ExchangeServiceUnavailableException());
+
+        when(transactionRepositoryPort.save(any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction result =
+                createTransactionService.createTransaction(command);
+
+        assertEquals(
+                TransactionStatus.APPROVED,
+                result.getStatus()
+        );
+
+        assertNotNull(result.getExchangeSnapshot());
+        assertFalse(result.getExchangeSnapshot().isAvailable());
+
+        assertEquals(
+                "Conversão indisponível",
+                result.getExchangeSnapshot().getUnavailableReason()
+        );
+
+        verify(transactionRepositoryPort)
+                .save(any(Transaction.class));
+
+        verify(
+                exchangeRatePort,
+                never()
+        ).getSellingRate(
+                eq("EUR"),
+                any(LocalDate.class)
+        );
+    }
+}

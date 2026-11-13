@@ -19,13 +19,14 @@ public class TransactionResponse {
     private TransactionStatus status;
     private String rejectionReason;
     private Long reversedTransactionId;
+    private ExchangeSnapshotResponse exchange;
 
     public TransactionResponse(Long id, Long ownerUserId,
                                Long destinationUserId, BigDecimal amount,
                                LocalDateTime occurredAt, String description,
                                TransactionType type, TransactionCategory category,
                                TransactionStatus status, String rejectionReason,
-                               Long reversedTransactionId) {
+                               Long reversedTransactionId, ExchangeSnapshotResponse exchange) {
         this.id = id;
         this.ownerUserId = ownerUserId;
         this.destinationUserId = destinationUserId;
@@ -37,6 +38,7 @@ public class TransactionResponse {
         this.status = status;
         this.rejectionReason = rejectionReason;
         this.reversedTransactionId = reversedTransactionId;
+        this.exchange = exchange;
     }
 
     public Long getId() {
@@ -81,5 +83,9 @@ public class TransactionResponse {
 
     public Long getReversedTransactionId() {
         return reversedTransactionId;
+    }
+
+    public ExchangeSnapshotResponse getExchange() {
+        return exchange;
     }
 }
