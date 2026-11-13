@@ -1,14 +1,18 @@
 package com.becajava.transactionservice.application.service;
 
+import com.becajava.transactionservice.application.exception.ExchangeRateNotFoundException;
+import com.becajava.transactionservice.application.exception.ExchangeServiceUnavailableException;
 import com.becajava.transactionservice.application.model.AccountBalance;
 import com.becajava.transactionservice.application.model.CreateTransactionCommand;
+import com.becajava.transactionservice.application.model.ExchangeRateResult;
 import com.becajava.transactionservice.domain.exception.InvalidTransactionException;
-import com.becajava.transactionservice.domain.model.Transaction;
-import com.becajava.transactionservice.domain.model.TransactionStatus;
-import com.becajava.transactionservice.domain.model.TransactionType;
+import com.becajava.transactionservice.domain.model.*;
 import com.becajava.transactionservice.port.in.CreateTransactionUseCase;
 import com.becajava.transactionservice.port.out.AccountBalancePort;
+import com.becajava.transactionservice.port.out.ExchangeRatePort;
 import com.becajava.transactionservice.port.out.TransactionRepositoryPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,13 +25,18 @@ import java.time.ZoneId;
 public class CreateTransactionService implements CreateTransactionUseCase {
 
     private final TransactionRepositoryPort transactionRepositoryPort;
+
     private static final ZoneId SAO_PAULO = ZoneId.of("America/Sao_Paulo");
 
-    private final AccountBalancePort accountBalancePort;
+    private static final Logger LOGGER = LoggerFactory.getLogger(CreateTransactionService.class);
 
-    public CreateTransactionService(TransactionRepositoryPort transactionRepositoryPort, AccountBalancePort accountBalancePort) {
+    private final AccountBalancePort accountBalancePort;
+    private final ExchangeRatePort exchangeRatePort;
+
+    public CreateTransactionService(TransactionRepositoryPort transactionRepositoryPort, AccountBalancePort accountBalancePort, ExchangeRatePort exchangeRatePort) {
         this.transactionRepositoryPort = transactionRepositoryPort;
         this.accountBalancePort = accountBalancePort;
+        this.exchangeRatePort = exchangeRatePort;
     }
 
     @Override
@@ -52,7 +61,33 @@ public class CreateTransactionService implements CreateTransactionUseCase {
             );
         }
 
+        attachExchangeSnapshot(transaction);
+
         return transactionRepositoryPort.save(transaction);
+    }
+
+    private void attachExchangeSnapshot(Transaction transaction) {
+
+        LocalDate transactionDate = transaction.getOccurredAt().toLocalDate();
+
+        try {
+            ExchangeRateResult usdRate = exchangeRatePort.getSellingRate("USD", transactionDate);
+
+            ExchangeRateResult eurRate = exchangeRatePort.getSellingRate("EUR", transactionDate);
+
+            ExchangeQuote usd = ExchangeQuote.fromBrl("USD", transaction.getAmount(), usdRate.getSellingRate(), usdRate.getQuoteDate());
+
+            ExchangeQuote eur = ExchangeQuote.fromBrl("EUR", transaction.getAmount(), eurRate.getSellingRate(), eurRate.getQuoteDate());
+
+            transaction.attachExchangeSnapshot(ExchangeSnapshot.available(usd, eur));
+
+        } catch (
+                ExchangeRateNotFoundException | ExchangeServiceUnavailableException exception
+        ) {
+            LOGGER.warn("Conversão indisponível para a transação do usuário {}: {}", transaction.getOwnerUserId(), exception.getMessage());
+
+            transaction.attachExchangeSnapshot(ExchangeSnapshot.unavailable("Conversão indisponível"));
+        }
     }
 
     private Transaction createDeposit(CreateTransactionCommand command) {
@@ -180,7 +215,9 @@ public class CreateTransactionService implements CreateTransactionUseCase {
         return transaction;
     }
 
-    private Transaction createPurchase(CreateTransactionCommand command) {
+    private Transaction createPurchase(
+            CreateTransactionCommand command
+    ) {
         AccountBalance accountBalance =
                 accountBalancePort
                         .findByUserId(command.getOwnerUserId())
@@ -194,7 +231,8 @@ public class CreateTransactionService implements CreateTransactionUseCase {
 
         LocalDateTime startOfDay = today.atStartOfDay();
 
-        LocalDateTime startOfNextDay = today.plusDays(1).atStartOfDay();
+        LocalDateTime startOfNextDay =
+                today.plusDays(1).atStartOfDay();
 
         BigDecimal spentToday =
                 transactionRepositoryPort
@@ -204,7 +242,7 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                                 startOfNextDay
                         );
 
-        return Transaction.createPurchase(
+        Transaction transaction = Transaction.createPurchase(
                 command.getOwnerUserId(),
                 command.getAmount(),
                 command.getDescription(),
@@ -214,6 +252,22 @@ public class CreateTransactionService implements CreateTransactionUseCase {
                 accountBalance.getDailyLimit(),
                 spentToday
         );
+
+        if (
+                TransactionStatus.APPROVED.equals(
+                        transaction.getStatus()
+                )
+        ) {
+            BigDecimal newBalance = accountBalance
+                    .getBalance()
+                    .subtract(command.getAmount());
+
+            accountBalancePort.updateBalance(
+                    command.getOwnerUserId(),
+                    newBalance
+            );
+        }
+
+        return transaction;
     }
 }
-

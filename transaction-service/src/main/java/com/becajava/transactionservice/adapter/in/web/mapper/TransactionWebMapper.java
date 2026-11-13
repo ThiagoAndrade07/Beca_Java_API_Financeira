@@ -20,7 +20,8 @@ public final class TransactionWebMapper {
                 transaction.getCategory(),
                 transaction.getStatus(),
                 transaction.getRejectionReason(),
-                transaction.getReversedTransactionId()
+                transaction.getReversedTransactionId(),
+                ExchangeSnapshotWebMapper.toResponse((transaction.getExchangeSnapshot()))
         );
     }
 }

@@ -18,7 +18,7 @@ public class Transaction {
     private TransactionStatus status;
     private String rejectionReason;
     private Long reversedTransactionId;
-
+    private ExchangeSnapshot exchangeSnapshot;
 
     private static final ZoneId SAO_PAULO = ZoneId.of("America/Sao_Paulo");
 
@@ -328,5 +328,13 @@ public class Transaction {
 
     public Long getReversedTransactionId() {
         return reversedTransactionId;
+    }
+
+    public void attachExchangeSnapshot(ExchangeSnapshot exchangeSnapshot) {
+        this.exchangeSnapshot = exchangeSnapshot;
+    }
+
+    public ExchangeSnapshot getExchangeSnapshot() {
+        return exchangeSnapshot;
     }
 }

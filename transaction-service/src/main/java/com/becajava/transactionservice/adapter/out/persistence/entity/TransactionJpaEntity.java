@@ -11,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -55,6 +56,30 @@ public class TransactionJpaEntity {
 
     @Column(name = "reversed_transaction_id")
     private Long reversedTransactionId;
+
+    @Column(name = "exchange_available", nullable = false)
+    private boolean exchangeAvailable;
+
+    @Column(name = "usd_rate", precision = 19, scale = 6)
+    private BigDecimal usdRate;
+
+    @Column(name = "amount_in_usd", precision = 19, scale = 2)
+    private BigDecimal amountInUsd;
+
+    @Column(name = "usd_quote_date")
+    private LocalDate usdQuoteDate;
+
+    @Column(name = "eur_rate", precision = 19, scale = 6)
+    private BigDecimal eurRate;
+
+    @Column(name = "amount_in_eur", precision = 19, scale = 2)
+    private BigDecimal amountInEur;
+
+    @Column(name = "eur_quote_date")
+    private LocalDate eurQuoteDate;
+
+    @Column(name = "exchange_unavailable_reason", length = 255)
+    private String exchangeUnavailableReason;
 
     protected TransactionJpaEntity() {
     }
@@ -153,5 +178,57 @@ public class TransactionJpaEntity {
 
     public Long getReversedTransactionId() {
         return reversedTransactionId;
+    }
+
+    public void attachExchangeData(
+            boolean exchangeAvailable,
+            BigDecimal usdRate,
+            BigDecimal amountInUsd,
+            LocalDate usdQuoteDate,
+            BigDecimal eurRate,
+            BigDecimal amountInEur,
+            LocalDate eurQuoteDate,
+            String exchangeUnavailableReason
+    ) {
+        this.exchangeAvailable = exchangeAvailable;
+        this.usdRate = usdRate;
+        this.amountInUsd = amountInUsd;
+        this.usdQuoteDate = usdQuoteDate;
+        this.eurRate = eurRate;
+        this.amountInEur = amountInEur;
+        this.eurQuoteDate = eurQuoteDate;
+        this.exchangeUnavailableReason = exchangeUnavailableReason;
+    }
+
+    public boolean isExchangeAvailable() {
+        return exchangeAvailable;
+    }
+
+    public BigDecimal getUsdRate() {
+        return usdRate;
+    }
+
+    public BigDecimal getAmountInUsd() {
+        return amountInUsd;
+    }
+
+    public LocalDate getUsdQuoteDate() {
+        return usdQuoteDate;
+    }
+
+    public BigDecimal getEurRate() {
+        return eurRate;
+    }
+
+    public BigDecimal getAmountInEur() {
+        return amountInEur;
+    }
+
+    public LocalDate getEurQuoteDate() {
+        return eurQuoteDate;
+    }
+
+    public String getExchangeUnavailableReason() {
+        return exchangeUnavailableReason;
     }
 }

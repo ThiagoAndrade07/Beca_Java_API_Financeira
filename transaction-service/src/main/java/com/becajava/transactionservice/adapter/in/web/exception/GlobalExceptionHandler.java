@@ -3,6 +3,8 @@ package com.becajava.transactionservice.adapter.in.web.exception;
 import com.becajava.transactionservice.adapter.in.web.dto.ApiErrorResponse;
 import com.becajava.transactionservice.application.exception.AccountBalanceNotFoundException;
 import com.becajava.transactionservice.application.exception.AccountServiceUnavailableException;
+import com.becajava.transactionservice.application.exception.ExchangeRateNotFoundException;
+import com.becajava.transactionservice.application.exception.ExchangeServiceUnavailableException;
 import com.becajava.transactionservice.domain.exception.InvalidTransactionException;
 import com.becajava.transactionservice.domain.exception.TransactionNotFoundException;
 import org.slf4j.Logger;
@@ -12,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -140,6 +143,46 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = new ApiErrorResponse(HttpStatus.NOT_FOUND.value(), exception.getMessage(), Map.of());
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(ExchangeRateNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleExchangeRateNotFound(ExchangeRateNotFoundException exception) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                exception.getMessage(),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(response);
+    }
+
+    @ExceptionHandler(ExchangeServiceUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleExchangeServiceUnavailable(
+            ExchangeServiceUnavailableException exception
+    ) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                exception.getMessage(),
+                Map.of()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(response);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingParameter(MissingServletRequestParameterException exception) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Parâmetro obrigatório não informado: "
+                        + exception.getParameterName(),
+                Map.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler(Exception.class)

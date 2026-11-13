@@ -1,39 +1,38 @@
 package com.becajava.transactionservice.application.service;
 
+import com.becajava.transactionservice.application.exception.AccountServiceUnavailableException;
+import com.becajava.transactionservice.application.exception.ExchangeServiceUnavailableException;
+import com.becajava.transactionservice.application.model.AccountBalance;
 import com.becajava.transactionservice.application.model.CreateTransactionCommand;
+import com.becajava.transactionservice.application.model.ExchangeRateResult;
 import com.becajava.transactionservice.domain.exception.InvalidTransactionException;
 import com.becajava.transactionservice.domain.model.Transaction;
 import com.becajava.transactionservice.domain.model.TransactionCategory;
 import com.becajava.transactionservice.domain.model.TransactionStatus;
 import com.becajava.transactionservice.domain.model.TransactionType;
 import com.becajava.transactionservice.port.out.AccountBalancePort;
+import com.becajava.transactionservice.port.out.ExchangeRatePort;
 import com.becajava.transactionservice.port.out.TransactionRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import com.becajava.transactionservice.application.exception.AccountServiceUnavailableException;
-import com.becajava.transactionservice.application.model.AccountBalance;
-import static org.mockito.Mockito.never;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.eq;
-import java.math.BigDecimal;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 class CreateTransactionServiceTest {
 
     private TransactionRepositoryPort transactionRepositoryPort;
     private AccountBalancePort accountBalancePort;
     private CreateTransactionService createTransactionService;
+    private ExchangeRatePort exchangeRatePort;
 
     @BeforeEach
     void setUp() {
@@ -41,10 +40,39 @@ class CreateTransactionServiceTest {
 
         accountBalancePort = mock(AccountBalancePort.class);
 
+        exchangeRatePort = mock(ExchangeRatePort.class);
+
+        when(
+                exchangeRatePort.getSellingRate(
+                        eq("USD"),
+                        any(LocalDate.class)
+                )
+        ).thenReturn(
+                new ExchangeRateResult(
+                        "USD",
+                        new BigDecimal("5.00"),
+                        LocalDate.of(2026, 11, 12)
+                )
+        );
+
+        when(
+                exchangeRatePort.getSellingRate(
+                        eq("EUR"),
+                        any(LocalDate.class)
+                )
+        ).thenReturn(
+                new ExchangeRateResult(
+                        "EUR",
+                        new BigDecimal("10.00"),
+                        LocalDate.of(2026, 11, 12)
+                )
+        );
+
         createTransactionService =
                 new CreateTransactionService(
                         transactionRepositoryPort,
-                        accountBalancePort
+                        accountBalancePort,
+                        exchangeRatePort
                 );
     }
 
@@ -406,5 +434,129 @@ class CreateTransactionServiceTest {
                         any(LocalDateTime.class),
                         any(LocalDateTime.class)
                 );
+
+        verify(accountBalancePort)
+                .updateBalance(
+                        7L,
+                        new BigDecimal("700.00")
+                );
+    }
+
+    @Test
+    void shouldAttachUsdAndEurConversionsToTransaction() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("100.00"),
+                        "Depósito com conversão",
+                        TransactionCategory.INCOME,
+                        TransactionType.DEPOSIT,
+                        null
+                );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("500.00"),
+                        new BigDecimal("2000.00"),
+                        new BigDecimal("1000.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L))
+                .thenReturn(Optional.of(accountBalance));
+
+        when(transactionRepositoryPort.save(any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction result =
+                createTransactionService.createTransaction(command);
+
+        assertNotNull(result.getExchangeSnapshot());
+        assertTrue(result.getExchangeSnapshot().isAvailable());
+
+        assertEquals(
+                new BigDecimal("20.00"),
+                result.getExchangeSnapshot()
+                        .getUsd()
+                        .getConvertedAmount()
+        );
+
+        assertEquals(
+                new BigDecimal("10.00"),
+                result.getExchangeSnapshot()
+                        .getEur()
+                        .getConvertedAmount()
+        );
+
+        verify(exchangeRatePort).getSellingRate(
+                eq("USD"),
+                any(LocalDate.class)
+        );
+
+        verify(exchangeRatePort).getSellingRate(
+                eq("EUR"),
+                any(LocalDate.class)
+        );
+    }
+
+    @Test
+    void shouldSaveTransactionWhenExchangeServiceIsUnavailable() {
+        CreateTransactionCommand command =
+                new CreateTransactionCommand(
+                        7L,
+                        new BigDecimal("100.00"),
+                        "Depósito sem conversão disponível",
+                        TransactionCategory.INCOME,
+                        TransactionType.DEPOSIT,
+                        null
+                );
+
+        AccountBalance accountBalance =
+                new AccountBalance(
+                        7L,
+                        new BigDecimal("500.00"),
+                        new BigDecimal("2000.00"),
+                        new BigDecimal("1000.00")
+                );
+
+        when(accountBalancePort.findByUserId(7L))
+                .thenReturn(Optional.of(accountBalance));
+
+        when(
+                exchangeRatePort.getSellingRate(
+                        eq("USD"),
+                        any(LocalDate.class)
+                )
+        ).thenThrow(new ExchangeServiceUnavailableException());
+
+        when(transactionRepositoryPort.save(any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction result =
+                createTransactionService.createTransaction(command);
+
+        assertEquals(
+                TransactionStatus.APPROVED,
+                result.getStatus()
+        );
+
+        assertNotNull(result.getExchangeSnapshot());
+        assertFalse(result.getExchangeSnapshot().isAvailable());
+
+        assertEquals(
+                "Conversão indisponível",
+                result.getExchangeSnapshot().getUnavailableReason()
+        );
+
+        verify(transactionRepositoryPort)
+                .save(any(Transaction.class));
+
+        verify(
+                exchangeRatePort,
+                never()
+        ).getSellingRate(
+                eq("EUR"),
+                any(LocalDate.class)
+        );
     }
 }
