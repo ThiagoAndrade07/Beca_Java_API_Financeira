@@ -1,14 +1,13 @@
 package com.becajava.transactionservice.port.in;
 
+import com.becajava.transactionservice.application.model.ExpenseAnalysisResult;
 import com.becajava.transactionservice.application.model.ExpenseGrouping;
-import com.becajava.transactionservice.application.model.ExpenseSummary;
 
 import java.time.LocalDate;
-import java.util.List;
 
 public interface AnalyzeExpensesUseCase {
 
-    List<ExpenseSummary> analyze(
+    ExpenseAnalysisResult analyze(
             Long ownerUserId,
             ExpenseGrouping groupBy,
             LocalDate startDate,

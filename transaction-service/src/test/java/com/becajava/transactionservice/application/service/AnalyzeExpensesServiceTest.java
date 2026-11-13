@@ -1,7 +1,7 @@
 package com.becajava.transactionservice.application.service;
 
+import com.becajava.transactionservice.application.model.ExpenseAnalysisResult;
 import com.becajava.transactionservice.application.model.ExpenseGrouping;
-import com.becajava.transactionservice.application.model.ExpenseSummary;
 import com.becajava.transactionservice.domain.exception.InvalidTransactionException;
 import com.becajava.transactionservice.domain.model.Transaction;
 import com.becajava.transactionservice.domain.model.TransactionCategory;
@@ -32,9 +32,13 @@ class AnalyzeExpensesServiceTest {
 
     @BeforeEach
     void setUp() {
-        transactionRepositoryPort = mock(TransactionRepositoryPort.class);
+        transactionRepositoryPort =
+                mock(TransactionRepositoryPort.class);
 
-        analyzeExpensesService = new AnalyzeExpensesService(transactionRepositoryPort);
+        analyzeExpensesService =
+                new AnalyzeExpensesService(
+                        transactionRepositoryPort
+                );
     }
 
     @Test
@@ -56,6 +60,12 @@ class AnalyzeExpensesServiceTest {
                         "80.00",
                         TransactionCategory.HEALTH,
                         TransactionType.WITHDRAWAL,
+                        TransactionStatus.APPROVED
+                ),
+                transaction(
+                        "20.00",
+                        TransactionCategory.TRANSFER,
+                        TransactionType.TRANSFER,
                         TransactionStatus.APPROVED
                 ),
                 transaction(
@@ -82,7 +92,7 @@ class AnalyzeExpensesServiceTest {
                         )
         ).thenReturn(transactions);
 
-        List<ExpenseSummary> result =
+        ExpenseAnalysisResult result =
                 analyzeExpensesService.analyze(
                         1L,
                         ExpenseGrouping.CATEGORY,
@@ -90,19 +100,48 @@ class AnalyzeExpensesServiceTest {
                         null
                 );
 
-        assertEquals(2, result.size());
+        assertEquals(3, result.getSummaries().size());
 
-        assertEquals("FOOD", result.get(0).getGroup());
-        assertEquals(new BigDecimal("150.00"), result.get(0).getTotal());
+        assertEquals(
+                "FOOD",
+                result.getSummaries().get(0).getGroup()
+        );
+        assertEquals(
+                new BigDecimal("150.00"),
+                result.getSummaries().get(0).getTotal()
+        );
 
-        assertEquals("HEALTH", result.get(1).getGroup());
-        assertEquals(new BigDecimal("80.00"), result.get(1).getTotal());
+        assertEquals(
+                "HEALTH",
+                result.getSummaries().get(1).getGroup()
+        );
+        assertEquals(
+                new BigDecimal("80.00"),
+                result.getSummaries().get(1).getTotal()
+        );
+
+        assertEquals(
+                "TRANSFER",
+                result.getSummaries().get(2).getGroup()
+        );
+        assertEquals(
+                new BigDecimal("20.00"),
+                result.getSummaries().get(2).getTotal()
+        );
+
+        assertEquals(
+                new BigDecimal("250.00"),
+                result.getTotal()
+        );
     }
 
     @Test
     void shouldRejectInvalidPeriod() {
-        LocalDate startDate = LocalDate.of(2026, 11, 30);
-        LocalDate endDate = LocalDate.of(2026, 11, 1);
+        LocalDate startDate =
+                LocalDate.of(2026, 11, 30);
+
+        LocalDate endDate =
+                LocalDate.of(2026, 11, 1);
 
         InvalidTransactionException exception =
                 assertThrows(
@@ -115,18 +154,32 @@ class AnalyzeExpensesServiceTest {
                         )
                 );
 
-        assertEquals("A data inicial não pode ser posterior à data final", exception.getMessage());
+        assertEquals(
+                "A data inicial não pode ser posterior à data final",
+                exception.getMessage()
+        );
 
         verifyNoInteractions(transactionRepositoryPort);
     }
 
-    private Transaction transaction(String amount, TransactionCategory category, TransactionType type, TransactionStatus status) {
+    private Transaction transaction(
+            String amount,
+            TransactionCategory category,
+            TransactionType type,
+            TransactionStatus status
+    ) {
         return new Transaction(
                 1L,
                 1L,
                 null,
                 new BigDecimal(amount),
-                LocalDateTime.of(2026, 11, 12, 10, 0),
+                LocalDateTime.of(
+                        2026,
+                        11,
+                        12,
+                        10,
+                        0
+                ),
                 "Transação de teste",
                 category,
                 type,

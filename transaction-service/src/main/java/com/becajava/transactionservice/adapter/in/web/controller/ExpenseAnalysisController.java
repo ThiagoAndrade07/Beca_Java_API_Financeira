@@ -1,10 +1,10 @@
 package com.becajava.transactionservice.adapter.in.web.controller;
 
-import com.becajava.transactionservice.adapter.in.web.dto.ExpenseSummaryResponse;
+import com.becajava.transactionservice.adapter.in.web.dto.ExpenseAnalysisResponse;
 import com.becajava.transactionservice.adapter.in.web.mapper.ExpenseAnalysisWebMapper;
 import com.becajava.transactionservice.application.model.AuthenticatedUser;
+import com.becajava.transactionservice.application.model.ExpenseAnalysisResult;
 import com.becajava.transactionservice.application.model.ExpenseGrouping;
-import com.becajava.transactionservice.application.model.ExpenseSummary;
 import com.becajava.transactionservice.port.in.AnalyzeExpensesUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -19,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 @Tag(
         name = "Expense analysis",
@@ -40,28 +38,45 @@ public class ExpenseAnalysisController {
 
     @Operation(
             summary = "Analisar despesas",
-            description = "Agrupa despesas aprovadas por categoria, dia ou mês."
+            description = """
+                    Agrupa as despesas aprovadas do usuário autenticado
+                    por categoria, dia ou mês. Quando o período não é
+                    informado, considera o mês atual no fuso de São Paulo.
+                    """
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Análise gerada"),
-            @ApiResponse(responseCode = "400", description = "Parâmetros inválidos"),
-            @ApiResponse(responseCode = "401", description = "Credenciais ausentes ou inválidas")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Análise gerada com sucesso"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Parâmetros inválidos"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Credenciais ausentes ou inválidas"
+            )
     })
     @GetMapping("/expenses")
-    public ResponseEntity<List<ExpenseSummaryResponse>> analyzeExpenses(
-            @RequestParam ExpenseGrouping groupBy,
+    public ResponseEntity<ExpenseAnalysisResponse> analyzeExpenses(
+            @RequestParam
+            ExpenseGrouping groupBy,
+
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate startDate,
+
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate endDate,
+
             Authentication authentication
     ) {
         AuthenticatedUser authenticatedUser =
                 (AuthenticatedUser) authentication.getPrincipal();
 
-        List<ExpenseSummary> summaries =
+        ExpenseAnalysisResult result =
                 analyzeExpensesUseCase.analyze(
                         authenticatedUser.getId(),
                         groupBy,
@@ -69,14 +84,9 @@ public class ExpenseAnalysisController {
                         endDate
                 );
 
-        List<ExpenseSummaryResponse> responses = new ArrayList<>();
+        ExpenseAnalysisResponse response =
+                ExpenseAnalysisWebMapper.toResponse(result);
 
-        for (ExpenseSummary summary : summaries) {
-            responses.add(
-                    ExpenseAnalysisWebMapper.toResponse(summary)
-            );
-        }
-
-        return ResponseEntity.ok(responses);
+        return ResponseEntity.ok(response);
     }
 }

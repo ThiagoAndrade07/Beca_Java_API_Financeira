@@ -35,7 +35,7 @@ class ExportTransactionsCsvServiceTest {
     }
 
     @Test
-    void shouldExportTransactionsAsCsv() {
+    void shouldExportTransactionsInPortugueseExcelFormat() {
         Transaction transaction =
                 new Transaction(
                         10L,
@@ -49,7 +49,7 @@ class ExportTransactionsCsvServiceTest {
                                 10,
                                 30
                         ),
-                        "Mercado, \"bairro\"",
+                        "Mercado; \"bairro\"",
                         TransactionCategory.FOOD,
                         TransactionType.PURCHASE,
                         TransactionStatus.APPROVED,
@@ -84,16 +84,22 @@ class ExportTransactionsCsvServiceTest {
 
         assertTrue(
                 csv.contains(
-                        "id,amount,occurredAt,description,type,"
-                                + "category,status,rejectionReason,"
-                                + "destinationUserId"
+                        "id;tipo;categoria;descricao;valorEmReal;"
+                                + "dataHora;status;motivoRejeicao;"
+                                + "usuarioDestinoId"
                 )
         );
 
         assertTrue(
                 csv.contains(
-                        "\"Mercado, \"\"bairro\"\"\""
+                        "\"Mercado; \"\"bairro\"\"\""
                 )
+        );
+
+        assertTrue(csv.contains("50,00"));
+
+        assertTrue(
+                csv.contains("12/11/2026 10:30:00")
         );
 
         assertTrue(csv.contains("PURCHASE"));
